@@ -10,6 +10,9 @@
 				"rust-lang.rust-analyzer"
 			]
 		}
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	}
 	// Use 'mounts' to make the cargo cache persistent in a Docker Volume.
 	// "mounts": [
