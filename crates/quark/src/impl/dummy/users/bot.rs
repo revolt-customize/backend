@@ -43,4 +43,8 @@ impl AbstractBot for DummyDb {
     async fn get_number_of_bots_by_user(&self, _user_id: &str) -> Result<usize> {
         Ok(1)
     }
+
+    async fn fetch_discoverable_bots(&self) -> Result<Vec<Bot>> {
+        Ok(vec![])
+    }
 }

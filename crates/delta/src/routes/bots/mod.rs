@@ -5,6 +5,7 @@ mod create;
 mod delete;
 mod edit;
 mod fetch;
+mod fetch_discover;
 mod fetch_owned;
 mod fetch_public;
 mod invite;
@@ -18,5 +19,6 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         fetch_owned::fetch_owned_bots,
         edit::edit_bot,
         delete::delete_bot,
+        fetch_discover::fetch_discoverable_bots,
     ]
 }

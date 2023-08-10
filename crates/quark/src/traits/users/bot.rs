@@ -23,4 +23,6 @@ pub trait AbstractBot: Sync + Send {
 
     /// Get the number of bots owned by a user
     async fn get_number_of_bots_by_user(&self, user_id: &str) -> Result<usize>;
+
+    async fn fetch_discoverable_bots(&self) -> Result<Vec<Bot>>;
 }
