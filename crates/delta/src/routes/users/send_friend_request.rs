@@ -22,16 +22,22 @@ pub async fn req(
     user: User,
     data: Json<DataSendFriendRequest>,
 ) -> Result<Json<User>> {
-    if let Some((username, discriminator)) = data.username.split_once('#') {
-        let mut target = db.fetch_user_by_username(username, discriminator).await?;
-
-        if user.bot.is_some() || target.bot.is_some() {
-            return Err(Error::IsBot);
+    let username: &str;
+    if data.username.contains('#') {
+        match data.username.split_once('#') {
+            Some((_username, _)) => username = _username,
+            None => return Err(Error::InvalidProperty),
         }
-
-        user.add_friend(db, &mut target).await?;
-        Ok(Json(target.with_auto_perspective(db, &user).await))
     } else {
-        Err(Error::InvalidProperty)
+        username = &data.username;
     }
+
+    let mut target = db.fetch_user_by_username(username, "").await?;
+
+    if user.bot.is_some() || target.bot.is_some() {
+        return Err(Error::IsBot);
+    }
+
+    user.add_friend(db, &mut target).await?;
+    Ok(Json(target.with_auto_perspective(db, &user).await))
 }

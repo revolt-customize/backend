@@ -28,12 +28,11 @@ impl AbstractUser for MongoDb {
         self.find_one_by_id(COL, id).await
     }
 
-    async fn fetch_user_by_username(&self, username: &str, discriminator: &str) -> Result<User> {
+    async fn fetch_user_by_username(&self, username: &str, _discriminator: &str) -> Result<User> {
         self.find_one_with_options(
             COL,
             doc! {
-                "username": username,
-                "discriminator": discriminator
+                "username": username
             },
             FIND_USERNAME_OPTIONS.clone(),
         )
