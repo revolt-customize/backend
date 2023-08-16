@@ -15,6 +15,7 @@ mod message_clear_reactions;
 mod message_delete;
 mod message_edit;
 mod message_fetch;
+mod message_interactions;
 mod message_query;
 mod message_query_stale;
 mod message_react;
@@ -54,5 +55,6 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         message_clear_reactions::clear_reactions,
         webhook_create::req,
         webhook_fetch_all::req,
+        message_interactions::req,
     ]
 }

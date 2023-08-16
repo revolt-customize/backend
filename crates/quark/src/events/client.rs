@@ -3,7 +3,7 @@ use revolt_models::v0::{FieldsWebhook, PartialWebhook, Webhook};
 use serde::{Deserialize, Serialize};
 
 use crate::models::channel::{FieldsChannel, PartialChannel};
-use crate::models::message::{AppendMessage, PartialMessage};
+use crate::models::message::{AppendMessage, Interaction, PartialMessage};
 use crate::models::server::{FieldsRole, FieldsServer, PartialRole, PartialServer};
 use crate::models::server_member::{FieldsMember, MemberCompositeKey, PartialMember};
 use crate::models::user::{FieldsUser, PartialUser, RelationshipStatus};
@@ -62,6 +62,9 @@ pub enum EventV1 {
 
     /// New message
     Message(Message),
+
+    /// Interaction Event
+    Interaction(Interaction),
 
     /// Update existing message
     MessageUpdate {
