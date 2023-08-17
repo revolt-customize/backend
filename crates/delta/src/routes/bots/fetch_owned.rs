@@ -11,9 +11,9 @@ use serde::Serialize;
 #[derive(Serialize, JsonSchema)]
 pub struct OwnedBotsResponse {
     /// Bot objects
-    bots: Vec<Bot>,
+    pub bots: Vec<Bot>,
     /// User objects
-    users: Vec<User>,
+    pub users: Vec<User>,
 }
 
 /// # Fetch Owned Bots
