@@ -56,6 +56,16 @@ impl AbstractBot for MongoDb {
         // ! FIXME: move this to generic?
         self.fetch_bots_by_user(user_id).await.map(|x| x.len())
     }
+
+    async fn fetch_discoverable_bots(&self) -> Result<Vec<Bot>> {
+        self.find(
+            COL,
+            doc! {
+                "public": true
+            },
+        )
+        .await
+    }
 }
 
 impl IntoDocumentPath for FieldsBot {

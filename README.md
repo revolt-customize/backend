@@ -33,3 +33,5 @@ Please note that a pull request should only take care of one issue so that we ca
 ## License
 
 The Revolt backend is generally licensed under the [GNU Affero General Public License v3.0](https://github.com/revoltchat/backend/blob/master/LICENSE). Please check individual crates for further license information.
+
+test

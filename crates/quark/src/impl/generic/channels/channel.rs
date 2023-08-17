@@ -11,7 +11,7 @@ use crate::{
     },
     tasks::{ack::AckEvent, process_embeds},
     types::push::MessageAuthor,
-    variables::delta::{MAX_ATTACHMENT_COUNT, MAX_REPLY_COUNT, MAX_EMBED_COUNT},
+    variables::delta::{MAX_ATTACHMENT_COUNT, MAX_EMBED_COUNT, MAX_REPLY_COUNT},
     web::idempotency::IdempotencyKey,
     Database, Error, OverrideField, Ref, Result,
 };
@@ -450,6 +450,7 @@ impl Channel {
             channel: self.id().to_string(),
             masquerade: data.masquerade,
             interactions: data.interactions.unwrap_or_default(),
+            components: data.components,
             author: author_id,
             webhook: webhook.map(|w| w.into()),
             ..Default::default()
@@ -497,16 +498,24 @@ impl Channel {
 
         // Add attachments to message.
         let mut attachments = vec![];
-        if data.attachments.as_ref().is_some_and(|v| v.len() > *MAX_ATTACHMENT_COUNT) {
+        if data
+            .attachments
+            .as_ref()
+            .is_some_and(|v| v.len() > *MAX_ATTACHMENT_COUNT)
+        {
             return Err(Error::TooManyAttachments {
                 max: *MAX_ATTACHMENT_COUNT,
             });
         }
 
-        if data.embeds.as_ref().is_some_and(|v| v.len() > *MAX_EMBED_COUNT) {
+        if data
+            .embeds
+            .as_ref()
+            .is_some_and(|v| v.len() > *MAX_EMBED_COUNT)
+        {
             return Err(Error::TooManyEmbeds {
-                max: *MAX_EMBED_COUNT
-            })
+                max: *MAX_EMBED_COUNT,
+            });
         }
 
         for attachment_id in data.attachments.as_deref().unwrap_or_default() {

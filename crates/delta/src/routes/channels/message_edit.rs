@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::message::{PartialMessage, SendableEmbed},
-    models::{Message, User},
+    models::{message::Component, Message, User},
     perms,
     types::january::Embed,
     Db, Error, Permission, Ref, Result, Timestamp,
@@ -19,6 +19,9 @@ pub struct DataEditMessage {
     /// Embeds to include in the message
     #[validate(length(min = 0, max = 10))]
     embeds: Option<Vec<SendableEmbed>>,
+
+    /// Edit Components of the message
+    components: Option<Vec<Component>>,
 }
 
 /// # Edit Message
@@ -86,6 +89,8 @@ pub async fn req(
     }
 
     partial.embeds = Some(new_embeds);
+
+    partial.components = edit.components;
 
     message.update(db, partial).await?;
 

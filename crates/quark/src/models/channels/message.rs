@@ -79,6 +79,21 @@ pub enum SystemMessage {
     ChannelOwnershipChanged { from: String, to: String },
 }
 
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+pub enum ComponentType {
+    #[serde(rename = "button")]
+    Button,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate)]
+pub struct Component {
+    #[serde(rename = "type")]
+    pub component_type: ComponentType,
+    pub label: String,
+    pub style: String,
+    pub enabled: bool,
+}
+
 /// Name and / or avatar override information
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate)]
 pub struct Masquerade {
@@ -128,6 +143,9 @@ pub struct Message {
     pub channel: String,
     /// Id of the user or webhook that sent this message
     pub author: String,
+    /// Message Components
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub components: Option<Vec<Component>>,
     /// The webhook that sent this message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook: Option<MessageWebhook>,
@@ -282,4 +300,99 @@ pub struct DataMessageSend {
     pub masquerade: Option<Masquerade>,
     /// Information about how this message should be interacted with
     pub interactions: Option<Interactions>,
+    /// Message components
+    pub components: Option<Vec<Component>>,
+}
+
+#[derive(Validate, Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
+pub struct Interaction {
+    pub message_id: String,
+    pub nonce: String,
+    pub channel_id: String,
+    pub author_id: String,
+    pub content: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use crate::{
+        events::client::EventV1,
+        models::{
+            message::{Component, ComponentType, Interactions},
+            Message,
+        },
+    };
+
+    #[test]
+    fn it_works() {
+        let component_str = json!({
+            "type": "button",
+            "label": "重试",
+            "style": "color:red ",
+            "enabled": false
+        });
+
+        let component = serde_json::from_value::<Component>(component_str).unwrap();
+
+        let component_json = serde_json::to_string_pretty(&component).unwrap();
+
+        println!("{component:?} {component_json}");
+    }
+
+    #[test]
+    fn encode() {
+        let message = EventV1::Message(Message {
+            id: "01H7SQZY1S4T094VARAYX8FKDD".into(),
+            nonce: Some("01H7SQZXX0WRGCEB2JBTKKPAV4".into()),
+            channel: "01H6ZYSC1X92SQNAD90QXTY8ER".into(),
+            author: "01H6ZWPCCKQ4J46D088HBY5ZP4".into(),
+            components: Some(vec![
+                Component {
+                    component_type: ComponentType::Button,
+                    label: "继续".into(),
+                    style: "color:green ".into(),
+                    enabled: false,
+                },
+                Component {
+                    component_type: ComponentType::Button,
+                    label: "重试".into(),
+                    style: "color:red ".into(),
+                    enabled: false,
+                },
+            ]),
+            webhook: None,
+            content: Some("Hello! How can I assist you today?".into()),
+            system: None,
+            attachments: None,
+            edited: None,
+            embeds: None,
+            mentions: None,
+            replies: None,
+            interactions: Interactions {
+                reactions: None,
+                restrict_reactions: false,
+            },
+            masquerade: None,
+            reactions: indexmap::IndexMap::new(),
+        });
+
+        let data = serde_json::to_string(&message).expect("Failed to serialise (as json).");
+
+        println!("{data} ");
+
+        let interaction_event = EventV1::Interaction {
+            message_id: "id".into(),
+            nonce: "nonce".into(),
+            channel_id: "channer".into(),
+            author_id: "user_id".into(),
+            content: "content".into(),
+        };
+
+        let data =
+            serde_json::to_string(&interaction_event).expect("Failed to serialise (as json).");
+
+        println!("{data} ");
+    }
 }
