@@ -75,6 +75,7 @@ pub async fn message_send(
             permissions
                 .has_permission(db, Permission::SendEmbeds)
                 .await?,
+            Some(false),
         )
         .await?;
 

@@ -66,6 +66,13 @@ pub enum EventV1 {
     /// Interaction Event
     Interaction(Interaction),
 
+    /// Message Patch Event
+    MessagePatch {
+        message_id: String,
+        content: String,
+        is_end: bool, // whether the end patch
+    },
+
     /// Update existing message
     MessageUpdate {
         id: String,

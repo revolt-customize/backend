@@ -410,6 +410,7 @@ impl Channel {
         author: MessageAuthor<'_>,
         mut idempotency: IdempotencyKey,
         generate_embeds: bool,
+        is_stream: Option<bool>,
     ) -> Result<Message> {
         Message::validate_sum(&data.content, data.embeds.as_deref().unwrap_or_default())?;
 
@@ -447,6 +448,7 @@ impl Channel {
         let message_id = Ulid::new().to_string();
         let mut message = Message {
             id: message_id.clone(),
+            is_stream,
             channel: self.id().to_string(),
             masquerade: data.masquerade,
             interactions: data.interactions.unwrap_or_default(),
