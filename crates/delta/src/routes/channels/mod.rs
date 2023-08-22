@@ -24,6 +24,7 @@ mod message_send;
 mod message_unreact;
 mod permissions_set;
 mod permissions_set_default;
+mod stream_message;
 mod voice_join;
 mod webhook_create;
 mod webhook_fetch_all;
@@ -56,5 +57,6 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         webhook_create::req,
         webhook_fetch_all::req,
         message_interactions::req,
+        stream_message::req,
     ]
 }
