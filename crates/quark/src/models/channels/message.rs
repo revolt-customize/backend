@@ -285,7 +285,7 @@ pub struct DataMessageSend {
     /// **This is deprecated and replaced by `Idempotency-Key`!**
     #[validate(length(min = 1, max = 64))]
     pub nonce: Option<String>,
-
+    pub is_stream: Option<bool>,
     /// Message content to send
     #[validate(length(min = 0, max = 2000))]
     pub content: Option<String>,

@@ -417,7 +417,10 @@ impl Channel {
         idempotency.consume_nonce(data.nonce).await?;
 
         // Check the message is not empty
-        if (data.content.as_ref().map_or(true, |v| v.is_empty()))
+        if (data
+            .content
+            .as_ref()
+            .map_or(true, |v| !is_stream.unwrap_or(false) && v.is_empty()))
             && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
             && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
         {
