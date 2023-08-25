@@ -9,8 +9,8 @@ use crate::{
     events::client::EventV1,
     models::{
         message::{
-            AppendMessage, BulkMessageResponse, Interactions, PartialMessage, SendableEmbed,
-            SystemMessage, DataMessageSend,
+            AppendMessage, BulkMessageResponse, DataMessageSend, Interactions, PartialMessage,
+            SendableEmbed, SystemMessage,
         },
         Channel, Emoji, Message, User,
     },
@@ -182,7 +182,7 @@ impl Message {
             }
         }
 
-        if running_total <= 2000 {
+        if running_total <= 20000 {
             Ok(())
         } else {
             Err(Error::PayloadTooLarge)
@@ -452,7 +452,6 @@ impl Interactions {
     }
 }
 
-
 fn throw_permission(permissions: u64, permission: Permission) -> Result<()> {
     if (permission as u64) & permissions == (permission as u64) {
         Ok(())
@@ -462,10 +461,7 @@ fn throw_permission(permissions: u64, permission: Permission) -> Result<()> {
 }
 
 impl DataMessageSend {
-    pub fn validate_webhook_permissions(
-        &self,
-        permissions: u64,
-    ) -> Result<()> {
+    pub fn validate_webhook_permissions(&self, permissions: u64) -> Result<()> {
         throw_permission(permissions, Permission::SendMessage)?;
 
         if self.attachments.as_ref().map_or(false, |v| !v.is_empty()) {
