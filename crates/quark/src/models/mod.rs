@@ -23,6 +23,7 @@ mod servers {
 
 mod users {
     pub mod bot;
+    pub mod prompt;
     pub mod user;
     pub mod user_settings;
 }

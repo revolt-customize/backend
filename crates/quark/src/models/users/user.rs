@@ -4,6 +4,8 @@ use validator::Validate;
 
 use crate::models::attachment::File;
 
+use super::prompt::BotModel;
+
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {
     !t
@@ -110,10 +112,13 @@ pub enum Flags {
 }
 
 /// Bot information for if the user is a bot
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[derive(Validate, Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub struct BotInformation {
     /// Id of the owner of this bot
     pub owner: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate]
+    pub model: Option<BotModel>,
 }
 
 /// Representiation of a User on Revolt.

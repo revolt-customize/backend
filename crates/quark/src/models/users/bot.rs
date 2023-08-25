@@ -33,7 +33,8 @@ pub struct Bot {
     /// Whether the bot is public
     /// (may be invited by anyone)
     pub public: bool,
-
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bot_type: Option<BotType>,
     /// Whether to enable analytics
     #[serde(skip_serializing_if = "if_false", default)]
     pub analytics: bool,
@@ -60,4 +61,12 @@ pub struct Bot {
 pub enum FieldsBot {
     Token,
     InteractionsURL,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+pub enum BotType {
+    #[serde(rename = "custom_bot")]
+    CustomBot,
+    #[serde(rename = "prompt_bot")]
+    PromptBot,
 }
