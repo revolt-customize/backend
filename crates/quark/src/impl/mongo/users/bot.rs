@@ -66,6 +66,16 @@ impl AbstractBot for MongoDb {
         )
         .await
     }
+
+    async fn search_bots_by_type(&self, bot_type: &str) -> Result<Vec<Bot>> {
+        self.find(
+            COL,
+            doc! {
+                "bot_type": bot_type
+            },
+        )
+        .await
+    }
 }
 
 impl IntoDocumentPath for FieldsBot {

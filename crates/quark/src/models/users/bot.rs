@@ -63,10 +63,61 @@ pub enum FieldsBot {
     InteractionsURL,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
 pub enum BotType {
     #[serde(rename = "custom_bot")]
     CustomBot,
     #[serde(rename = "prompt_bot")]
     PromptBot,
+}
+
+impl<'v> rocket::form::FromFormField<'v> for BotType {
+    fn from_value(field: rocket::form::ValueField<'v>) -> rocket::form::Result<'v, Self> {
+        match field.value {
+            "custom_bot" => Ok(BotType::CustomBot),
+            "prompt_bot" => Ok(BotType::PromptBot),
+            _ => Err(field.unexpected().into()),
+        }
+    }
+}
+
+impl BotType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BotType::CustomBot => "custom_bot",
+            BotType::PromptBot => "prompt_bot",
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rocket::form::{FromFormField, ValueField};
+
+    #[test]
+    fn test_bot_type_from_value() {
+        let value_field = ValueField::from_value("custom_bot");
+        let bot_type = BotType::from_value(value_field).unwrap();
+        assert_eq!(bot_type, BotType::CustomBot);
+
+        let value_field = ValueField::from_value("prompt_bot");
+        let bot_type = BotType::from_value(value_field).unwrap();
+        assert_eq!(bot_type, BotType::PromptBot);
+
+        let value_field = ValueField::from_value("unexpected");
+        let bot_type = BotType::from_value(value_field.clone());
+        assert_eq!(bot_type, Err(value_field.unexpected().into()));
+    }
+
+    #[test]
+    fn test_bot_type_as_str() {
+        let custom_bot = BotType::CustomBot;
+        let custom_bot_str = custom_bot.as_str();
+        assert_eq!(custom_bot_str, "custom_bot");
+
+        let prompt_bot = BotType::PromptBot;
+        let prompt_bot_str = prompt_bot.as_str();
+        assert_eq!(prompt_bot_str, "prompt_bot");
+    }
 }

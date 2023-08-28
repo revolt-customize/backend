@@ -47,4 +47,8 @@ impl AbstractBot for DummyDb {
     async fn fetch_discoverable_bots(&self) -> Result<Vec<Bot>> {
         Ok(vec![])
     }
+
+    async fn search_bots_by_type(&self, _bot_type: &str) -> Result<Vec<Bot>> {
+        Ok(vec![])
+    }
 }
