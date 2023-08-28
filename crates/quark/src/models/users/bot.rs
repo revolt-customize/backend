@@ -34,6 +34,14 @@ pub struct Bot {
     /// (may be invited by anyone)
     pub public: bool,
 
+    /// Bor default server
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_server: Option<String>,
+
+    /// Bot server invite code
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_invite: Option<String>,
+
     /// Whether to enable analytics
     #[serde(skip_serializing_if = "if_false", default)]
     pub analytics: bool,

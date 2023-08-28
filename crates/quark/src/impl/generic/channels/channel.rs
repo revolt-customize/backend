@@ -47,7 +47,6 @@ impl Channel {
     /// Create a channel
     pub async fn create(&self, db: &Database) -> Result<()> {
         db.insert_channel(self).await?;
-
         let event = EventV1::ChannelCreate(self.clone());
         match self {
             Self::SavedMessages { user, .. } => event.private(user.clone()).await,
@@ -60,7 +59,18 @@ impl Channel {
                 event.p(server.clone()).await;
             }
         }
+        Ok(())
+    }
 
+    /// Create a channel of type group (have default recipients)
+    pub async fn create_group(&self, db: &Database) -> Result<()> {
+        self.create(db).await?;
+        if let Self::Group { id, owner, .. } = self {
+            let mut channel = db.fetch_channel(id).await?;
+            for user in ["01H7A1NB3P10J15DFEPQ7RN67J", "01H6ZWPCCKQ4J46D088HBY5ZP4"] {
+                channel.add_user_to_group(db, user, owner).await?;
+            }
+        }
         Ok(())
     }
 

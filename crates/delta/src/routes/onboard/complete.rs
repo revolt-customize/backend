@@ -1,10 +1,13 @@
 use crate::util::regex::RE_USERNAME;
 use revolt_quark::{
-    authifier::models::Session, models::User, Database, EmptyResponse, Error, Result,
+    authifier::models::Session,
+    models::{Channel, User},
+    Database, EmptyResponse, Error, Result,
 };
 
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 use validator::Validate;
 
 /// # New User Data
@@ -41,6 +44,25 @@ pub async fn req(
         username,
         ..Default::default()
     };
-
-    db.insert_user(&user).await.map(|_| EmptyResponse)
+    let res = db.insert_user(&user).await.map(|_| EmptyResponse);
+    if res.is_ok() {
+        let create_user = user.clone();
+        let server: revolt_quark::models::Server =
+            db.fetch_server("01H7A2D436ZP77QPQ0XK7HBG1H").await?;
+        server.create_member(db, create_user, None).await?;
+        let group_id = Ulid::new().to_string();
+        let group = Channel::Group {
+            id: group_id.clone(),
+            name: String::from("多模型群聊"),
+            owner: user.id.clone(),
+            description: Some(String::from("默认群聊，可以通过@来调用大模型")),
+            recipients: vec![user.id.clone()],
+            icon: None,
+            last_message_id: None,
+            permissions: None,
+            nsfw: false,
+        };
+        group.create_group(db).await?;
+    };
+    res
 }
