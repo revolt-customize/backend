@@ -79,6 +79,6 @@ pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Jso
         nsfw: info.nsfw.unwrap_or(false),
     };
 
-    group.create(db).await?;
+    group.create_group(db).await?;
     Ok(Json(group))
 }
