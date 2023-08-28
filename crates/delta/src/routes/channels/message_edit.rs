@@ -14,7 +14,7 @@ use validator::Validate;
 #[derive(Validate, Serialize, Deserialize, JsonSchema)]
 pub struct DataEditMessage {
     /// New message content
-    #[validate(length(min = 1, max = 2000))]
+    #[validate(length(min = 1))]
     content: Option<String>,
     /// Embeds to include in the message
     #[validate(length(min = 0, max = 10))]
