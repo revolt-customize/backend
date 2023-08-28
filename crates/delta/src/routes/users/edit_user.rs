@@ -101,6 +101,7 @@ pub async fn req(
         && data.badges.is_none()
         && data.flags.is_none()
         && data.remove.is_none()
+        && data.bot.is_none()
     {
         return Ok(Json(user));
     }
