@@ -287,7 +287,7 @@ pub struct DataMessageSend {
     pub nonce: Option<String>,
     pub is_stream: Option<bool>,
     /// Message content to send
-    #[validate(length(min = 0, max = 2000))]
+    #[validate(length(min = 0, max = 20000))]
     pub content: Option<String>,
     /// Attachments to include in message
     pub attachments: Option<Vec<String>>,
