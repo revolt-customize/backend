@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use revolt_models::v0::{
     AppendMessage, Channel, Emoji, FieldsChannel, FieldsMember, FieldsRole, FieldsServer,
-    FieldsUser, FieldsWebhook, MemberCompositeKey, Message, PartialChannel, PartialMember,
-    PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Server, UserSettings,
-    Webhook,
+    FieldsUser, FieldsWebhook, Interaction, MemberCompositeKey, Message, PartialChannel,
+    PartialMember, PartialMessage, PartialRole, PartialServer, PartialUser, PartialWebhook, Server,
+    UserSettings, Webhook,
 };
 use revolt_result::Error;
 
@@ -61,6 +61,16 @@ pub enum EventV1 {
     Pong { data: Ping }, */
     /// New message
     Message(Message),
+
+    /// Interaction Event
+    Interaction(Interaction),
+
+    /// Message Patch Event
+    MessagePatch {
+        message_id: String,
+        content: String,
+        is_end: bool, // whether the end patch
+    },
 
     /// Update existing message
     MessageUpdate {

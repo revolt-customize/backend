@@ -93,10 +93,6 @@ impl Bot {
     where
         D: Into<Option<PartialBot>>,
     {
-        if owner.bot.is_some() {
-            return Err(create_error!(IsBot));
-        }
-
         // TODO: config
         let max_bot_count = 10;
         if db.get_number_of_bots_by_user(&owner.id).await? >= max_bot_count {
@@ -171,14 +167,25 @@ impl Bot {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Bot, FieldsBot, PartialBot, User};
+    use crate::{Bot, BotType, FieldsBot, PartialBot, User};
 
     #[async_std::test]
     async fn crud() {
         database_test!(|db| async move {
-            let owner = User::create(&db, "Owner".to_string(), None, None)
+            let mut owner = User::create(&db, "Owner".to_string(), None, None)
                 .await
                 .unwrap();
+
+            owner.bot = Some(crate::BotInformation {
+                owner: owner.id.clone(),
+                model: Some(crate::BotModel {
+                    model_name: "gpt-4".into(),
+                    prompts: crate::PromptTemplate {
+                        system_prompt: "system".into(),
+                    },
+                    temperature: 0.4,
+                }),
+            });
 
             let bot = Bot::create(
                 &db,
@@ -187,6 +194,7 @@ mod tests {
                 PartialBot {
                     token: Some("my token".to_string()),
                     interactions_url: Some("some url".to_string()),
+                    bot_type: Some(BotType::PromptBot),
                     ..Default::default()
                 },
             )
@@ -211,6 +219,9 @@ mod tests {
             let fetched_bot1 = db.fetch_bot(&bot.id).await.unwrap();
             let fetched_bot2 = db.fetch_bot_by_token(&fetched_bot1.token).await.unwrap();
             let fetched_bots = db.fetch_bots_by_user(&owner.id).await.unwrap();
+
+            let fetched_user_bot = db.fetch_user(&bot.id).await.unwrap();
+            assert_eq!(fetched_user_bot.bot, owner.bot);
 
             assert!(!bot.public);
             assert!(fetched_bot1.public);

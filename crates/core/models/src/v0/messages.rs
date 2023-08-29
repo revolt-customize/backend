@@ -28,6 +28,9 @@ auto_derived_partial!(
         /// Message content
         #[serde(skip_serializing_if = "Option::is_none")]
         pub content: Option<String>,
+        /// Message Components
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub components: Option<Vec<Component>>,
         /// System message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub system: Option<SystemMessage>,
@@ -153,6 +156,27 @@ auto_derived!(
         pub timestamp: u64,
         /// URL to open when clicking notification
         pub url: String,
+    }
+
+    pub struct Component {
+        #[serde(rename = "type")]
+        pub component_type: ComponentType,
+        pub label: String,
+        pub style: String,
+        pub enabled: bool,
+    }
+
+    pub enum ComponentType {
+        #[serde(rename = "button")]
+        Button,
+    }
+
+    pub struct Interaction {
+        pub message_id: String,
+        pub nonce: String,
+        pub channel_id: String,
+        pub author_id: String,
+        pub content: String,
     }
 );
 

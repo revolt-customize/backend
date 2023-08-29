@@ -312,6 +312,25 @@ impl From<crate::Metadata> for Metadata {
     }
 }
 
+impl From<crate::ComponentType> for ComponentType {
+    fn from(value: crate::ComponentType) -> Self {
+        match value {
+            crate::ComponentType::Button => ComponentType::Button,
+        }
+    }
+}
+
+impl From<crate::Component> for Component {
+    fn from(value: crate::Component) -> Self {
+        Component {
+            component_type: value.component_type.into(),
+            label: value.label,
+            style: value.style,
+            enabled: value.enabled,
+        }
+    }
+}
+
 impl From<crate::Message> for Message {
     fn from(value: crate::Message) -> Self {
         Message {
@@ -336,6 +355,9 @@ impl From<crate::Message> for Message {
                 .collect(),
             interactions: value.interactions.into(),
             masquerade: value.masquerade.map(|masq| masq.into()),
+            components: value
+                .components
+                .map(|component| component.into_iter().map(|x| x.into()).collect()),
         }
     }
 }
@@ -365,6 +387,9 @@ impl From<crate::PartialMessage> for PartialMessage {
             }),
             interactions: value.interactions.map(|interactions| interactions.into()),
             masquerade: value.masquerade.map(|masq| masq.into()),
+            components: value
+                .components
+                .map(|component| component.into_iter().map(|x| x.into()).collect()),
         }
     }
 }

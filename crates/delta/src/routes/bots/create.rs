@@ -1,9 +1,8 @@
-use revolt_database::{Bot, Database, User};
+use revolt_database::{Bot, BotType, Database, PartialBot, User};
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
-use ulid::Ulid;
 use validator::Validate;
 
 /// # Create Bot
@@ -20,55 +19,44 @@ pub async fn create_bot(
         return Err(create_error!(IsBot));
     }
 
-    let mut info = info.into_inner();
+    let info = info.into_inner();
     info.validate().map_err(|error| {
         create_error!(FailedValidation {
             error: error.to_string()
         })
     })?;
 
-    let max_bot_count = 10;
-
-    if db.get_number_of_bots_by_user(&user.id).await? >= max_bot_count {
-        return Err(create_error!(ReachedMaximumBots));
-    }
+    let mut owner = user.clone();
 
     let mut bot_information = v0::BotInformation {
-        owner_id: user.id.clone(),
+        owner_id: owner.id.clone(),
         model: None,
     };
 
-    match info.bot_type {
-        Some(v0::BotType::CustomBot) => (),
-        Some(v0::BotType::PromptBot) => match info.model {
+    let mut bot_type = BotType::CustomBot;
+
+    if let Some(v0::BotType::PromptBot) = info.bot_type {
+        bot_type = BotType::PromptBot;
+        match info.model {
             Some(m) => bot_information.model = Some(m),
             None => {
                 bot_information.model = Some(Default::default());
             }
-        },
-        None => info.bot_type = Some(v0::BotType::CustomBot),
+        }
     }
 
-    let id = Ulid::new().to_string();
-    let username = User::validate_username(info.name)?;
-    let bot_user = User {
-        id: id.clone(),
-        discriminator: User::find_discriminator(db, &username, None).await?,
-        username,
-        bot: Some(bot_information.into()),
-        ..Default::default()
-    };
+    owner.bot = Some(bot_information.into());
 
-    let bot = Bot {
-        id,
-        owner: user.id,
-        token: nanoid::nanoid!(64),
-        bot_type: info.bot_type.map(|x| x.into()),
-        ..Default::default()
-    };
-
-    db.insert_user(&bot_user).await?;
-    db.insert_bot(&bot).await?;
+    let bot = Bot::create(
+        db,
+        info.name,
+        &owner,
+        PartialBot {
+            bot_type: Some(bot_type),
+            ..Default::default()
+        },
+    )
+    .await?;
     Ok(Json(bot.into()))
 }
 

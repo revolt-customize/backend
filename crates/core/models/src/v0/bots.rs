@@ -1,5 +1,6 @@
 use super::users::BotModel;
 use super::User;
+
 use validator::Validate;
 
 auto_derived!(
@@ -161,7 +162,7 @@ auto_derived_with_no_eq!(
         )]
         pub name: String,
         pub bot_type: Option<BotType>,
-        #[validate]
+        #[cfg_attr(feature = "validator", validate)]
         pub model: Option<BotModel>,
     }
 
