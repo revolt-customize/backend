@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use revolt_database::util::idempotency::IdempotencyKey;
 use ulid::Ulid;
 
 use crate::{
@@ -12,7 +13,6 @@ use crate::{
     tasks::{ack::AckEvent, process_embeds},
     types::push::MessageAuthor,
     variables::delta::{MAX_ATTACHMENT_COUNT, MAX_EMBED_COUNT, MAX_REPLY_COUNT},
-    web::idempotency::IdempotencyKey,
     Database, Error, OverrideField, Ref, Result,
 };
 
@@ -414,7 +414,10 @@ impl Channel {
     ) -> Result<Message> {
         Message::validate_sum(&data.content, data.embeds.as_deref().unwrap_or_default())?;
 
-        idempotency.consume_nonce(data.nonce).await?;
+        idempotency
+            .consume_nonce(data.nonce)
+            .await
+            .map_err(|_| Error::InvalidOperation)?;
 
         // Check the message is not empty
         if (data

@@ -1,6 +1,14 @@
 use super::File;
+use once_cell::sync::Lazy;
+use regex::Regex;
 
-auto_derived!(
+/// Regex for valid usernames
+///
+/// Block zero width space
+/// Block lookalike characters
+pub static RE_USERNAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\p{L}|[\d_.-])+$").unwrap());
+
+auto_derived_partial_with_no_eq!(
     /// User
     pub struct User {
         /// Unique Id
@@ -56,6 +64,18 @@ auto_derived!(
         pub relationship: RelationshipStatus,
         /// Whether this user is currently online
         pub online: bool,
+    },
+    "PartialUser"
+);
+
+auto_derived!(
+    /// Optional fields on user object
+    pub enum FieldsUser {
+        Avatar,
+        StatusText,
+        StatusPresence,
+        ProfileContent,
+        ProfileBackground,
     }
 
     /// User's relationship with another user (or themselves)
@@ -161,13 +181,41 @@ auto_derived!(
         Spam = 8,
     }
 
+    #[derive(Default)]
+    pub struct PromptTemplate {
+        pub system_prompt: String,
+    }
+);
+
+auto_derived_with_no_eq!(
     /// Bot information for if the user is a bot
     pub struct BotInformation {
         /// Id of the owner of this bot
         #[cfg_attr(feature = "serde", serde(rename = "owner"))]
         pub owner_id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[validate]
+        pub model: Option<BotModel>,
+    }
+
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    pub struct BotModel {
+        pub model_name: String,
+        pub prompts: PromptTemplate,
+        #[validate(range(min = 0.0, max = 1.0))]
+        pub temperature: f32,
     }
 );
+
+impl Default for BotModel {
+    fn default() -> Self {
+        Self {
+            model_name: "gpt-3.5-turbo".to_owned(),
+            prompts: Default::default(),
+            temperature: Default::default(),
+        }
+    }
+}
 
 pub trait CheckRelationship {
     fn with(&self, user: &str) -> RelationshipStatus;

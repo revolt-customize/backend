@@ -22,7 +22,6 @@ mod servers {
 }
 
 mod users {
-    pub mod bot;
     pub mod prompt;
     pub mod user;
     pub mod user_settings;
@@ -41,7 +40,6 @@ pub use servers::*;
 pub use users::*;
 
 pub use attachment::File;
-pub use bot::Bot;
 pub use channel::Channel;
 pub use channel_invite::Invite;
 pub use channel_unread::ChannelUnread;

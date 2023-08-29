@@ -24,6 +24,17 @@ macro_rules! auto_derived {
     };
 }
 
+macro_rules! auto_derived_with_no_eq {
+    ( $( $item:item )+ ) => {
+        $(
+            #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+            #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+            #[derive(Debug, Clone, PartialEq)]
+            $item
+        )+
+    };
+}
+
 #[cfg(feature = "partials")]
 macro_rules! auto_derived_partial {
     ( $item:item, $name:expr ) => {
@@ -31,6 +42,18 @@ macro_rules! auto_derived_partial {
             OptionalStruct, Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema,
         )]
         #[optional_derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
+        #[optional_name = $name]
+        #[opt_skip_serializing_none]
+        #[opt_some_priority]
+        $item
+    };
+}
+
+#[cfg(feature = "partials")]
+macro_rules! auto_derived_partial_with_no_eq {
+    ( $item:item, $name:expr ) => {
+        #[derive(OptionalStruct, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+        #[optional_derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
         #[optional_name = $name]
         #[opt_skip_serializing_none]
         #[opt_some_priority]

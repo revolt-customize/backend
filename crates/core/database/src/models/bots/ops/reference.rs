@@ -79,4 +79,23 @@ impl AbstractBots for ReferenceDb {
             Err(create_error!(NotFound))
         }
     }
+
+    async fn fetch_discoverable_bots(&self) -> Result<Vec<Bot>> {
+        let bots = self.bots.lock().await;
+        Ok(bots.values().filter(|bot| bot.public).cloned().collect())
+    }
+
+    async fn search_bots_by_type(&self, bot_type: &str) -> Result<Vec<Bot>> {
+        let bots = self.bots.lock().await;
+        Ok(bots
+            .values()
+            .filter(|bot| {
+                if bot.bot_type.is_some() {
+                    return bot.bot_type.as_ref().unwrap().as_str() == bot_type;
+                }
+                false
+            })
+            .cloned()
+            .collect())
+    }
 }
