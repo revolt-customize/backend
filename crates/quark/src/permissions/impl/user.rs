@@ -59,6 +59,12 @@ async fn calculate_permission(data: &mut PermissionCalculator<'_>, db: &crate::D
         return u32::MAX;
     }
 
+    if let Some(ref bot_info) = user.bot {
+        if bot_info.owner == data.perspective.id {
+            return u32::MAX;
+        }
+    }
+
     let relationship = data.flag_known_relationship.cloned().unwrap_or_else(|| {
         user.relationship
             .as_ref()

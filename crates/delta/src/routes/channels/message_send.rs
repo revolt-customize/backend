@@ -1,8 +1,8 @@
+use revolt_database::util::idempotency::IdempotencyKey;
 use revolt_quark::{
     models::{message::DataMessageSend, Message, User},
     perms,
     types::push::MessageAuthor,
-    web::idempotency::IdempotencyKey,
     Db, Error, Permission, Ref, Result,
 };
 
@@ -65,6 +65,8 @@ pub async fn message_send(
         interactions.validate(db, &mut permissions).await?;
     }
 
+    let is_stream = data.is_stream;
+
     // Create the message
     let message = channel
         .send_message(
@@ -75,7 +77,7 @@ pub async fn message_send(
             permissions
                 .has_permission(db, Permission::SendEmbeds)
                 .await?,
-            Some(false),
+            is_stream,
         )
         .await?;
 

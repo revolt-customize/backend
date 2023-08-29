@@ -285,9 +285,9 @@ pub struct DataMessageSend {
     /// **This is deprecated and replaced by `Idempotency-Key`!**
     #[validate(length(min = 1, max = 64))]
     pub nonce: Option<String>,
-
+    pub is_stream: Option<bool>,
     /// Message content to send
-    #[validate(length(min = 0, max = 2000))]
+    #[validate(length(min = 0))]
     pub content: Option<String>,
     /// Attachments to include in message
     pub attachments: Option<Vec<String>>,
@@ -323,7 +323,7 @@ mod tests {
     use crate::{
         events::client::EventV1,
         models::{
-            message::{Component, ComponentType, Interactions},
+            message::{Component, ComponentType, Interaction, Interactions},
             Message,
         },
     };
@@ -351,6 +351,7 @@ mod tests {
             nonce: Some("01H7SQZXX0WRGCEB2JBTKKPAV4".into()),
             channel: "01H6ZYSC1X92SQNAD90QXTY8ER".into(),
             author: "01H6ZWPCCKQ4J46D088HBY5ZP4".into(),
+            is_stream: None,
             components: Some(vec![
                 Component {
                     component_type: ComponentType::Button,
@@ -385,13 +386,13 @@ mod tests {
 
         println!("{data} ");
 
-        let interaction_event = EventV1::Interaction {
+        let interaction_event = EventV1::Interaction(Interaction {
             message_id: "id".into(),
             nonce: "nonce".into(),
             channel_id: "channer".into(),
             author_id: "user_id".into(),
             content: "content".into(),
-        };
+        });
 
         let data =
             serde_json::to_string(&interaction_event).expect("Failed to serialise (as json).");

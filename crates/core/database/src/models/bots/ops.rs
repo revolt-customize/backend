@@ -32,4 +32,8 @@ pub trait AbstractBots: Sync + Send {
 
     /// Delete a bot from the database
     async fn delete_bot(&self, id: &str) -> Result<()>;
+
+    async fn fetch_discoverable_bots(&self) -> Result<Vec<Bot>>;
+
+    async fn search_bots_by_type(&self, bot_type: &str) -> Result<Vec<Bot>>;
 }

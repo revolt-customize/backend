@@ -41,10 +41,30 @@ macro_rules! auto_derived {
     };
 }
 
+macro_rules! auto_derived_with_no_eq {
+    ( $( $item:item )+ ) => {
+        $(
+            #[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
+            $item
+        )+
+    };
+}
+
 macro_rules! auto_derived_partial {
     ( $item:item, $name:expr ) => {
-        #[derive(OptionalStruct, Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
+        #[derive(OptionalStruct, Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
         #[optional_derive(Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
+        #[optional_name = $name]
+        #[opt_skip_serializing_none]
+        #[opt_some_priority]
+        $item
+    };
+}
+
+macro_rules! auto_derived_partial_with_no_eq {
+    ( $item:item, $name:expr ) => {
+        #[derive(OptionalStruct, Serialize, Deserialize, Debug, Clone, PartialEq)]
+        #[optional_derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
         #[optional_name = $name]
         #[opt_skip_serializing_none]
         #[opt_some_priority]
@@ -81,6 +101,7 @@ pub mod util;
 pub use models::*;
 
 pub mod events;
+pub mod tasks;
 
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {

@@ -104,6 +104,10 @@ impl State {
             .map(|arr| arr.iter().map(|x| x.id.to_string()).collect())
             .unwrap_or_default();
 
+        if let Some(ref bot_info) = user.bot {
+            user_ids.insert(bot_info.owner.clone());
+        }
+
         // Fetch all memberships with their corresponding servers.
         let members: Vec<Member> = db.fetch_all_memberships(&user.id).await?;
         self.cache.members = members

@@ -80,6 +80,28 @@ impl AbstractBots for MongoDb {
     async fn delete_bot(&self, id: &str) -> Result<()> {
         query!(self, delete_one_by_id, COL, id).map(|_| ())
     }
+
+    async fn fetch_discoverable_bots(&self) -> Result<Vec<Bot>> {
+        query!(
+            self,
+            find,
+            COL,
+            doc! {
+                "public": true
+            }
+        )
+    }
+
+    async fn search_bots_by_type(&self, bot_type: &str) -> Result<Vec<Bot>> {
+        query!(
+            self,
+            find,
+            COL,
+            doc! {
+                "bot_type": bot_type
+            }
+        )
+    }
 }
 
 impl IntoDocumentPath for FieldsBot {

@@ -30,6 +30,25 @@ impl From<crate::Bot> for Bot {
             terms_of_service_url: value.terms_of_service_url,
             privacy_policy_url: value.privacy_policy_url,
             flags: value.flags.unwrap_or_default() as u32,
+            bot_type: value.bot_type.map(|x| x.into()),
+        }
+    }
+}
+
+impl From<FieldsBot> for crate::FieldsBot {
+    fn from(value: FieldsBot) -> Self {
+        match value {
+            FieldsBot::InteractionsURL => crate::FieldsBot::InteractionsURL,
+            FieldsBot::Token => crate::FieldsBot::Token,
+        }
+    }
+}
+
+impl From<crate::FieldsBot> for FieldsBot {
+    fn from(value: crate::FieldsBot) -> Self {
+        match value {
+            crate::FieldsBot::InteractionsURL => FieldsBot::InteractionsURL,
+            crate::FieldsBot::Token => FieldsBot::Token,
         }
     }
 }
@@ -294,6 +313,25 @@ impl From<crate::Metadata> for Metadata {
     }
 }
 
+impl From<crate::ComponentType> for ComponentType {
+    fn from(value: crate::ComponentType) -> Self {
+        match value {
+            crate::ComponentType::Button => ComponentType::Button,
+        }
+    }
+}
+
+impl From<crate::Component> for Component {
+    fn from(value: crate::Component) -> Self {
+        Component {
+            component_type: value.component_type.into(),
+            label: value.label,
+            style: value.style,
+            enabled: value.enabled,
+        }
+    }
+}
+
 impl From<crate::Message> for Message {
     fn from(value: crate::Message) -> Self {
         Message {
@@ -311,9 +349,16 @@ impl From<crate::Message> for Message {
             embeds: value.embeds,
             mentions: value.mentions,
             replies: value.replies,
-            reactions: value.reactions,
+            reactions: value
+                .reactions
+                .into_iter()
+                .map(|(k, v)| (k, v.into_iter().collect()))
+                .collect(),
             interactions: value.interactions.into(),
             masquerade: value.masquerade.map(|masq| masq.into()),
+            components: value
+                .components
+                .map(|component| component.into_iter().map(|x| x.into()).collect()),
         }
     }
 }
@@ -335,9 +380,17 @@ impl From<crate::PartialMessage> for PartialMessage {
             embeds: value.embeds,
             mentions: value.mentions,
             replies: value.replies,
-            reactions: value.reactions,
+            reactions: value.reactions.map(|reactions| {
+                reactions
+                    .into_iter()
+                    .map(|(k, v)| (k, v.into_iter().collect()))
+                    .collect()
+            }),
             interactions: value.interactions.map(|interactions| interactions.into()),
             masquerade: value.masquerade.map(|masq| masq.into()),
+            components: value
+                .components
+                .map(|component| component.into_iter().map(|x| x.into()).collect()),
         }
     }
 }
@@ -367,8 +420,18 @@ impl From<crate::SystemMessage> for SystemMessage {
 impl From<crate::Interactions> for Interactions {
     fn from(value: crate::Interactions) -> Self {
         Interactions {
-            reactions: value.reactions,
+            reactions: value
+                .reactions
+                .map(|reactions| reactions.into_iter().collect()),
             restrict_reactions: value.restrict_reactions,
+        }
+    }
+}
+
+impl From<crate::AppendMessage> for AppendMessage {
+    fn from(value: crate::AppendMessage) -> Self {
+        AppendMessage {
+            embeds: value.embeds,
         }
     }
 }
@@ -605,6 +668,83 @@ impl crate::User {
             id: self.id,
         }
     }
+
+    pub async fn into_self(self) -> User {
+        User {
+            username: self.username,
+            discriminator: self.discriminator,
+            display_name: self.display_name,
+            avatar: self.avatar.map(|file| file.into()),
+            relations: self
+                .relations
+                .map(|relationships| {
+                    relationships
+                        .into_iter()
+                        .map(|relationship| relationship.into())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            badges: self.badges.unwrap_or_default() as u32,
+            status: self.status.map(|status| status.into()),
+            profile: self.profile.map(|profile| profile.into()),
+            flags: self.flags.unwrap_or_default() as u32,
+            privileged: self.privileged,
+            bot: self.bot.map(|bot| bot.into()),
+            relationship: RelationshipStatus::User,
+            online: revolt_presence::is_online(&self.id).await,
+            id: self.id,
+        }
+    }
+}
+
+impl From<crate::PartialUser> for PartialUser {
+    fn from(value: crate::PartialUser) -> Self {
+        PartialUser {
+            username: value.username,
+            discriminator: value.discriminator,
+            display_name: value.display_name,
+            avatar: value.avatar.map(|file| file.into()),
+            relations: value.relations.map(|relationships| {
+                relationships
+                    .into_iter()
+                    .map(|relationship| relationship.into())
+                    .collect()
+            }),
+            badges: value.badges.map(|badges| badges as u32),
+            status: value.status.map(|status| status.into()),
+            profile: value.profile.map(|profile| profile.into()),
+            flags: value.flags.map(|flags| flags as u32),
+            privileged: value.privileged,
+            bot: value.bot.map(|bot| bot.into()),
+            relationship: None,
+            online: None,
+            id: value.id,
+        }
+    }
+}
+
+impl From<FieldsUser> for crate::FieldsUser {
+    fn from(value: FieldsUser) -> Self {
+        match value {
+            FieldsUser::Avatar => crate::FieldsUser::Avatar,
+            FieldsUser::ProfileBackground => crate::FieldsUser::ProfileBackground,
+            FieldsUser::ProfileContent => crate::FieldsUser::ProfileContent,
+            FieldsUser::StatusPresence => crate::FieldsUser::StatusPresence,
+            FieldsUser::StatusText => crate::FieldsUser::StatusText,
+        }
+    }
+}
+
+impl From<crate::FieldsUser> for FieldsUser {
+    fn from(value: crate::FieldsUser) -> Self {
+        match value {
+            crate::FieldsUser::Avatar => FieldsUser::Avatar,
+            crate::FieldsUser::ProfileBackground => FieldsUser::ProfileBackground,
+            crate::FieldsUser::ProfileContent => FieldsUser::ProfileContent,
+            crate::FieldsUser::StatusPresence => FieldsUser::StatusPresence,
+            crate::FieldsUser::StatusText => FieldsUser::StatusText,
+        }
+    }
 }
 
 impl From<crate::RelationshipStatus> for RelationshipStatus {
@@ -660,10 +800,38 @@ impl From<crate::UserProfile> for UserProfile {
     }
 }
 
+impl From<crate::PromptTemplate> for PromptTemplate {
+    fn from(value: crate::PromptTemplate) -> Self {
+        PromptTemplate {
+            system_prompt: value.system_prompt,
+        }
+    }
+}
+
+impl From<crate::BotModel> for BotModel {
+    fn from(value: crate::BotModel) -> Self {
+        BotModel {
+            model_name: value.model_name,
+            prompts: value.prompts.into(),
+            temperature: value.temperature,
+        }
+    }
+}
+
+impl From<crate::BotType> for BotType {
+    fn from(value: crate::BotType) -> Self {
+        match value {
+            crate::BotType::CustomBot => BotType::CustomBot,
+            crate::BotType::PromptBot => BotType::PromptBot,
+        }
+    }
+}
+
 impl From<crate::BotInformation> for BotInformation {
     fn from(value: crate::BotInformation) -> Self {
         BotInformation {
             owner_id: value.owner,
+            model: value.model.map(|m| m.into()),
         }
     }
 }

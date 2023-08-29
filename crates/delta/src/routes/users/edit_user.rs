@@ -1,4 +1,6 @@
-use revolt_quark::models::user::{FieldsUser, PartialUser, User};
+use once_cell::sync::Lazy;
+use regex::Regex;
+use revolt_quark::models::user::{BotInformation, FieldsUser, PartialUser, User};
 use revolt_quark::models::File;
 use revolt_quark::{Database, Error, Ref, Result};
 
@@ -8,7 +10,11 @@ use rocket::State;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::util::regex::RE_DISPLAY_NAME;
+/// Regex for valid display names
+///
+/// Block zero width space
+/// Block newline and carriage return
+pub static RE_DISPLAY_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^\u200B\n\r]+$").unwrap());
 
 /// # Profile Data
 #[derive(Validate, Serialize, Deserialize, Debug, JsonSchema)]
@@ -48,6 +54,11 @@ pub struct DataEditUser {
     /// Enum of user flags
     #[serde(skip_serializing_if = "Option::is_none")]
     flags: Option<i32>,
+
+    /// Bot information
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate]
+    bot: Option<BotInformation>,
 
     /// Fields to remove from user object
     #[validate(length(min = 1))]
@@ -96,6 +107,7 @@ pub async fn req(
         && data.badges.is_none()
         && data.flags.is_none()
         && data.remove.is_none()
+        && data.bot.is_none()
     {
         return Ok(Json(user));
     }
@@ -161,8 +173,37 @@ pub async fn req(
         partial.profile = Some(new_profile);
     }
 
+    // 5. Edit bot field
+    if let Some(bot) = data.bot {
+        partial.bot = Some(bot);
+    }
+
     user.update(db, partial, data.remove.unwrap_or_default())
         .await?;
 
     Ok(Json(user.foreign()))
+}
+
+#[cfg(test)]
+mod tests {
+    use validator::Validate;
+
+    use crate::routes::users::edit_user::DataEditUser;
+
+    #[test]
+    fn test_validate() {
+        let bot_data = json!({
+            "bot":{
+                "owner":"1230",
+                "model":{
+                    "model_name":"gpt-4",
+                    "prompts":{"system_prompt":""},
+                    "temperature":2.0
+                }
+            }
+        });
+
+        let bot: DataEditUser = serde_json::from_value(bot_data).unwrap();
+        assert!(bot.validate().map_err(|e| println!("{e}")).is_err());
+    }
 }
