@@ -30,6 +30,7 @@ impl From<crate::Bot> for Bot {
             terms_of_service_url: value.terms_of_service_url,
             privacy_policy_url: value.privacy_policy_url,
             flags: value.flags.unwrap_or_default() as u32,
+            bot_type: value.bot_type.map(|x| x.into()),
         }
     }
 }

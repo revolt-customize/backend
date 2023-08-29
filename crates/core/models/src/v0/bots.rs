@@ -19,6 +19,8 @@ auto_derived!(
         /// Whether the bot is public
         /// (may be invited by anyone)
         pub public: bool,
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        pub bot_type: Option<BotType>,
 
         /// Whether to enable analytics
         #[cfg_attr(
