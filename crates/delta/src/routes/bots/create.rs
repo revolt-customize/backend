@@ -1,9 +1,22 @@
 use revolt_database::{Bot, BotType, Database, PartialBot, User};
 use revolt_models::v0;
+use revolt_quark::variables::delta::BOT_SERVER_PUBLIC_URL;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
 use validator::Validate;
+
+#[derive(Debug, serde::Serialize)]
+struct CreatePromptBotReq {
+    user_id: String,
+    user_name: String,
+    bot_id: String,
+    bot_name: String,
+    bot_token: String,
+    model_name: String,
+    prompt_template: String,
+    temperature: f32,
+}
 
 /// # Create Bot
 ///
@@ -45,18 +58,39 @@ pub async fn create_bot(
         }
     }
 
-    owner.bot = Some(bot_information.into());
+    owner.bot = Some(bot_information.clone().into());
 
     let bot = Bot::create(
         db,
-        info.name,
+        info.name.clone(),
         &owner,
         PartialBot {
-            bot_type: Some(bot_type),
+            bot_type: Some(bot_type.clone()),
             ..Default::default()
         },
     )
     .await?;
+
+    if bot_type == BotType::PromptBot && !(*BOT_SERVER_PUBLIC_URL).is_empty() {
+        let model = bot_information.model.unwrap_or(Default::default());
+
+        let data = CreatePromptBotReq {
+            user_id: bot.owner.clone(),
+            user_name: user.username.clone(),
+            bot_id: bot.id.clone(),
+            bot_name: info.name,
+            bot_token: bot.token.clone(),
+            model_name: model.model_name,
+            prompt_template: model.prompts.system_prompt,
+            temperature: model.temperature,
+        };
+
+        let host = BOT_SERVER_PUBLIC_URL.to_string();
+        let url = format!("{host}/api/rest/v1/bot/create");
+        let client = reqwest::Client::new();
+        let _ = client.post(url).json(&data).send().await;
+    }
+
     Ok(Json(bot.into()))
 }
 

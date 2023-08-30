@@ -169,3 +169,6 @@ pub fn preflight_checks() {
 // Production / staging configuration
 pub static IS_STAGING: Lazy<bool> =
     Lazy::new(|| env::var("REVOLT_IS_STAGING").map_or(false, |v| v == "1"));
+
+pub static BOT_SERVER_PUBLIC_URL: Lazy<String> =
+    Lazy::new(|| env::var("BOT_SERVER_PUBLIC_URL").unwrap_or_else(|_| "".to_string()));
