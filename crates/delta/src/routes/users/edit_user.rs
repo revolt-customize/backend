@@ -80,18 +80,23 @@ pub async fn req(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
+    let mut bot_information: Option<BotInformation> = None;
+
     // If we want to edit a different user than self, ensure we have
     // permissions and subsequently replace the user in question
     if target.id != "@me" && target.id != user.id {
         let target_user = target.as_user(db).await?;
         let is_bot_owner = target_user
             .bot
+            .as_ref()
             .map(|bot| bot.owner == user.id)
             .unwrap_or_default();
 
         if !is_bot_owner && !user.privileged {
             return Err(Error::NotPrivileged);
         }
+
+        bot_information = target_user.bot;
     }
 
     // Otherwise, filter out invalid edit fields
@@ -175,7 +180,10 @@ pub async fn req(
 
     // 5. Edit bot field
     if let Some(bot) = data.bot {
-        partial.bot = Some(bot);
+        partial.bot = bot_information.as_mut().map(|x| {
+            x.model = bot.model;
+            x.clone()
+        });
     }
 
     user.update(db, partial, data.remove.unwrap_or_default())
