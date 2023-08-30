@@ -63,15 +63,13 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
     }
 
     let id = Ulid::new().to_string();
-    let mut users = vec![user_id.clone()];
-    users.extend((*OFFICIAL_MODEL_BOTS).clone());
 
-    let group = Channel::Group {
+    let mut group = Channel::Group {
         id,
         name: String::from("多模型群聊"),
         owner: user_id.clone(),
         description: Some(String::from("默认群聊，可以通过@来调用大模型")),
-        recipients: users,
+        recipients: vec![user_id.clone()],
         icon: None,
         last_message_id: None,
         permissions: None,
@@ -79,6 +77,10 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
     };
 
     group.create(db).await?;
+    let bot_users = db.fetch_users(OFFICIAL_MODEL_BOTS.as_slice()).await?;
+    for bot in bot_users {
+        group.add_user_to_group(&db.clone(), &bot, &user_id).await?;
+    }
 
     Ok(())
 }
