@@ -82,3 +82,32 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{rocket, routes::onboard::complete::DataOnboard, util::test::TestHarness};
+    use rocket::http::{ContentType, Header, Status};
+
+    #[rocket::async_test]
+    async fn test_on_board_compelete() {
+        let harness = TestHarness::new().await;
+        let (_, session) = harness.new_account_session().await;
+
+        let response = harness
+            .client
+            .post("/onboard/complete")
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(
+                json!(DataOnboard {
+                    username: "cac".into()
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        // println!("{:}", response.into_string().await.unwrap());
+    }
+}

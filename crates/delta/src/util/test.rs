@@ -80,6 +80,24 @@ impl TestHarness {
         (account, session, user)
     }
 
+    pub async fn new_account_session(&self) -> (Account, Session) {
+        let account = Account::new(
+            &self.authifier,
+            format!("{}@revolt.chat", TestHarness::rand_string()),
+            "password".to_string(),
+            false,
+        )
+        .await
+        .expect("`Account`");
+
+        let session = account
+            .create_session(&self.authifier, String::new())
+            .await
+            .expect("`Session`");
+
+        (account, session)
+    }
+
     pub async fn wait_for_event<F>(&mut self, predicate: F) -> EventV1
     where
         F: Fn(&EventV1) -> bool,
