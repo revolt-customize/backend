@@ -1,9 +1,13 @@
-use revolt_database::{Bot, BotType, Database, PartialBot, User};
+use std::collections::HashMap;
+
+use revolt_database::{Bot, BotType, Channel, Database, Invite, Member, PartialBot, Server, User};
 use revolt_models::v0;
+use revolt_permissions::DEFAULT_PERMISSION_SERVER;
 use revolt_quark::variables::delta::BOT_SERVER_PUBLIC_URL;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
+use ulid::Ulid;
 use validator::Validate;
 
 #[derive(Debug, serde::Serialize)]
@@ -60,12 +64,24 @@ pub async fn create_bot(
 
     owner.bot = Some(bot_information.clone().into());
 
+    let invite = create_default_channel_for_bot(db, info.name.clone(), &owner).await?;
+
+    let mut invite_code: Option<String> = None;
+    let mut server_id: Option<String> = None;
+
+    if let Invite::Server { code, server, .. } = invite {
+        invite_code = Some(code);
+        server_id = Some(server);
+    }
+
     let bot = Bot::create(
         db,
         info.name.clone(),
         &owner,
         PartialBot {
             bot_type: Some(bot_type.clone()),
+            default_server: server_id,
+            server_invite: invite_code,
             ..Default::default()
         },
     )
@@ -85,13 +101,68 @@ pub async fn create_bot(
             temperature: model.temperature,
         };
 
-        let host = BOT_SERVER_PUBLIC_URL.to_string();
-        let url = format!("{host}/api/rest/v1/bot/create");
-        let client = reqwest::Client::new();
-        let _ = client.post(url).json(&data).send().await;
+        let _ = create_bot_at_bot_server(&data).await;
     }
 
     Ok(Json(bot.into()))
+}
+
+async fn create_default_channel_for_bot(
+    db: &Database,
+    bot_name: String,
+    user: &User,
+) -> Result<Invite> {
+    let channel_id = Ulid::new().to_string();
+    let server_id = Ulid::new().to_string();
+
+    let channel = Channel::TextChannel {
+        id: channel_id.clone(),
+        server: server_id.clone(),
+        name: "默认频道".into(),
+        description: None,
+        icon: None,
+        last_message_id: None,
+        default_permissions: None,
+        role_permissions: HashMap::new(),
+        nsfw: false,
+    };
+
+    channel.create(db).await?;
+
+    let server = Server {
+        id: server_id.clone(),
+        owner: user.id.clone(),
+        name: bot_name + "的社区",
+        description: None,
+        channels: vec![channel_id],
+        nsfw: false,
+        default_permissions: *DEFAULT_PERMISSION_SERVER as i64,
+        ..Default::default()
+    };
+
+    server.create(db).await?;
+    Member::create(db, &server, user).await?;
+    let invite = Invite::create_channel_invite(db, user.id.clone(), &channel).await?;
+    Ok(invite)
+}
+
+async fn create_bot_at_bot_server(data: &CreatePromptBotReq) -> Result<()> {
+    let host = BOT_SERVER_PUBLIC_URL.to_string();
+    let url = format!("{host}/api/rest/v1/bot/create");
+    let client = reqwest::Client::new();
+    let response = client
+        .post(url.clone())
+        .json(&data)
+        .send()
+        .await
+        .map_err(|_| create_error!(InternalError))?
+        .text()
+        .await
+        .map_err(|_| create_error!(InternalError))?;
+
+    let data_json = serde_json::to_string(&data).map_err(|_| create_error!(InternalError))?;
+    info!("bot-server:\nurl:{url}\ndata:{data_json}\nresponse:{response}");
+    Ok(())
 }
 
 #[cfg(test)]

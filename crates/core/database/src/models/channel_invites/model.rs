@@ -1,12 +1,12 @@
 use revolt_result::{create_error, Result};
 
-use crate::Database;
+use crate::{Channel, Database};
 
-/* static ALPHABET: [char; 54] = [
+static ALPHABET: [char; 54] = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J',
     'K', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
     'g', 'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'y', 'z',
-]; */
+];
 
 auto_derived!(
     /// Invite
@@ -56,28 +56,32 @@ impl Invite {
     }
 
     /// Create a new invite from given information
-    /*pub async fn create_channel_invite(db: &Database, creator_id: String, target: &Channel) -> Result<Invite> {
+    pub async fn create_channel_invite(
+        db: &Database,
+        creator_id: String,
+        target: &Channel,
+    ) -> Result<Invite> {
         let code = nanoid::nanoid!(8, &ALPHABET);
         let invite = match &target {
             Channel::Group { id, .. } => Ok(Invite::Group {
                 code,
-                creator: creator.id.clone(),
+                creator: creator_id.clone(),
                 channel: id.clone(),
             }),
             Channel::TextChannel { id, server, .. } | Channel::VoiceChannel { id, server, .. } => {
                 Ok(Invite::Server {
                     code,
-                    creator: creator.id.clone(),
+                    creator: creator_id.clone(),
                     server: server.clone(),
                     channel: id.clone(),
                 })
             }
-            _ => Err(Error::InvalidOperation),
+            _ => Err(create_error!(InvalidOperation)),
         }?;
 
         db.insert_invite(&invite).await?;
         Ok(invite)
-    }*/
+    }
 
     /// Resolve an invite by its ID or by a public server ID
     pub async fn find(db: &Database, code: &str) -> Result<Invite> {

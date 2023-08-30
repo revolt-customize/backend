@@ -172,3 +172,27 @@ pub static IS_STAGING: Lazy<bool> =
 
 pub static BOT_SERVER_PUBLIC_URL: Lazy<String> =
     Lazy::new(|| env::var("BOT_SERVER_PUBLIC_URL").unwrap_or_else(|_| "".to_string()));
+
+pub static OFFICIAL_MODEL_BOTS: Lazy<Vec<String>> = Lazy::new(|| {
+    env::var("OFFICIAL_MODEL_BOTS")
+        .unwrap_or_default()
+        .split(',')
+        .map(String::from)
+        .collect()
+});
+
+pub static OFFICIAL_CUSTOM_BOTS: Lazy<Vec<String>> = Lazy::new(|| {
+    env::var("OFFICIAL_CUSTOM_BOTS")
+        .unwrap_or_default()
+        .split(',')
+        .map(String::from)
+        .collect()
+});
+
+#[test]
+fn test_read_env() {
+    dotenv::dotenv().ok();
+
+    println!("official_model_bots = {:?}", *OFFICIAL_MODEL_BOTS);
+    println!("official_custom_bots = {:?}", *OFFICIAL_CUSTOM_BOTS);
+}
