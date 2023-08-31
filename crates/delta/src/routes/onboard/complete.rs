@@ -46,14 +46,11 @@ pub async fn req(
         })
     })?;
 
-    prepare_on_board_data(db, session.user_id.clone()).await?;
+    let new_user = User::create(db, data.username, session.user_id, None).await?;
 
-    Ok(Json(
-        User::create(db, data.username, session.user_id, None)
-            .await?
-            .into_self()
-            .await,
-    ))
+    prepare_on_board_data(db, new_user.id.clone()).await?;
+
+    Ok(Json(new_user.into_self().await))
 }
 
 /// prepare on board data for the first time login
@@ -63,13 +60,14 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
     }
 
     let id = Ulid::new().to_string();
+    let users = vec![user_id.clone()];
 
     let mut group = Channel::Group {
         id,
         name: String::from("多模型群聊"),
         owner: user_id.clone(),
         description: Some(String::from("默认群聊，可以通过@来调用大模型")),
-        recipients: vec![user_id.clone()],
+        recipients: users,
         icon: None,
         last_message_id: None,
         permissions: None,
@@ -88,12 +86,22 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use crate::{rocket, routes::onboard::complete::DataOnboard, util::test::TestHarness};
+    use revolt_database::User;
+    use revolt_quark::variables::delta::OFFICIAL_MODEL_BOTS;
     use rocket::http::{ContentType, Header, Status};
 
     #[rocket::async_test]
     async fn test_on_board_compelete() {
         let harness = TestHarness::new().await;
         let (_, session) = harness.new_account_session().await;
+
+        let mut users = vec![];
+        users.extend((*OFFICIAL_MODEL_BOTS).clone());
+        for user_bot in users {
+            // let _ = harness.db.delete_user(&user_bot).await;
+            // let _ = User::create(&harness.db, user_bot.clone(), Some(user_bot.clone()), None).await;
+            println!("{user_bot}");
+        }
 
         let response = harness
             .client
