@@ -86,7 +86,6 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use crate::{rocket, routes::onboard::complete::DataOnboard, util::test::TestHarness};
-    use revolt_database::User;
     use revolt_quark::variables::delta::OFFICIAL_MODEL_BOTS;
     use rocket::http::{ContentType, Header, Status};
 
