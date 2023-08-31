@@ -1,6 +1,6 @@
 use std::num::NonZeroUsize;
 
-use revolt_result::{create_error, Error, Result};
+use revolt_result::{create_error, Result};
 
 use async_std::sync::Mutex;
 use once_cell::sync::Lazy;
@@ -85,7 +85,7 @@ use rocket::{
 #[cfg(feature = "rocket-impl")]
 #[async_trait]
 impl<'r> FromRequest<'r> for IdempotencyKey {
-    type Error = Error;
+    type Error = revolt_result::Error;
 
     async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
         if let Some(key) = request

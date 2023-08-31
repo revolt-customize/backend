@@ -59,6 +59,10 @@ auto_derived!(
             serde(skip_serializing_if = "crate::if_zero_u32", default)
         )]
         pub flags: u32,
+
+        /// Bot server invite code
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub server_invite: Option<String>,
     }
 
     /// Optional fields on bot object

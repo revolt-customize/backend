@@ -128,6 +128,29 @@ auto_derived!(
     }
 );
 
+#[allow(clippy::derivable_impls)]
+impl Default for Server {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            description: Default::default(),
+            channels: Default::default(),
+            categories: Default::default(),
+            system_messages: Default::default(),
+            roles: Default::default(),
+            default_permissions: Default::default(),
+            icon: Default::default(),
+            banner: Default::default(),
+            nsfw: Default::default(),
+            id: Default::default(),
+            owner: Default::default(),
+            flags: Default::default(),
+            analytics: Default::default(),
+            discoverable: Default::default(),
+        }
+    }
+}
+
 #[allow(clippy::disallowed_methods)]
 impl Server {
     /// Create a server

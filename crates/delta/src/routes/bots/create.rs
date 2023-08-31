@@ -1,9 +1,25 @@
-use revolt_database::{Bot, BotType, Database, PartialBot, User};
+use revolt_database::{Bot, BotType, Channel, Database, Invite, Member, PartialBot, Server, User};
 use revolt_models::v0;
+use revolt_permissions::DEFAULT_PERMISSION_SERVER;
+use revolt_quark::variables::delta::BOT_SERVER_PUBLIC_URL;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
+use std::collections::HashMap;
+use ulid::Ulid;
 use validator::Validate;
+
+#[derive(Debug, serde::Serialize)]
+struct CreatePromptBotReq {
+    user_id: String,
+    user_name: String,
+    bot_id: String,
+    bot_name: String,
+    bot_token: String,
+    model_name: String,
+    prompt_template: String,
+    temperature: f32,
+}
 
 /// # Create Bot
 ///
@@ -45,19 +61,109 @@ pub async fn create_bot(
         }
     }
 
-    owner.bot = Some(bot_information.into());
+    owner.bot = Some(bot_information.clone().into());
+
+    let (server, channel) = create_default_channel_for_bot(db, info.name.clone(), &owner).await?;
+
+    let mut invite_code: Option<String> = None;
+
+    if let Invite::Server { code, .. } =
+        Invite::create_channel_invite(db, user.id.clone(), &channel).await?
+    {
+        invite_code = Some(code);
+    }
 
     let bot = Bot::create(
         db,
-        info.name,
+        info.name.clone(),
         &owner,
         PartialBot {
-            bot_type: Some(bot_type),
+            bot_type: Some(bot_type.clone()),
+            server_invite: invite_code,
             ..Default::default()
         },
     )
     .await?;
+
+    let bot_user = db.fetch_user(&bot.id).await?;
+
+    Member::create(db, &server, &user).await?;
+    Member::create(db, &server, &bot_user).await?;
+
+    if bot_type == BotType::PromptBot && !(*BOT_SERVER_PUBLIC_URL).is_empty() {
+        let _ = create_bot_at_bot_server(&bot, &bot_user, &user).await;
+    }
+
     Ok(Json(bot.into()))
+}
+
+async fn create_default_channel_for_bot(
+    db: &Database,
+    bot_name: String,
+    user: &User,
+) -> Result<(Server, Channel)> {
+    let channel_id = Ulid::new().to_string();
+    let server_id = Ulid::new().to_string();
+
+    let channel = Channel::TextChannel {
+        id: channel_id.clone(),
+        server: server_id.clone(),
+        name: "默认频道".into(),
+        description: None,
+        icon: None,
+        last_message_id: None,
+        default_permissions: None,
+        role_permissions: HashMap::new(),
+        nsfw: false,
+    };
+
+    channel.create(db).await?;
+
+    let server = Server {
+        id: server_id.clone(),
+        owner: user.id.clone(),
+        name: bot_name + "的社区",
+        description: None,
+        channels: vec![channel_id],
+        nsfw: false,
+        default_permissions: *DEFAULT_PERMISSION_SERVER as i64,
+        ..Default::default()
+    };
+
+    server.create(db).await?;
+    Ok((server, channel))
+}
+
+async fn create_bot_at_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) -> Result<()> {
+    let model = bot_user.bot.as_ref().unwrap().model.as_ref().unwrap();
+
+    let data = CreatePromptBotReq {
+        user_id: bot_owner.id.clone(),
+        user_name: bot_owner.username.clone(),
+        bot_id: bot.id.clone(),
+        bot_name: bot_user.username.clone(),
+        bot_token: bot.token.clone(),
+        model_name: model.model_name.clone(),
+        prompt_template: model.prompts.system_prompt.clone(),
+        temperature: model.temperature,
+    };
+
+    let host = BOT_SERVER_PUBLIC_URL.to_string();
+    let url = format!("{host}/api/rest/v1/bot/create");
+    let client = reqwest::Client::new();
+    let response = client
+        .post(url.clone())
+        .json(&data)
+        .send()
+        .await
+        .map_err(|_| create_error!(InternalError))?
+        .text()
+        .await
+        .map_err(|_| create_error!(InternalError))?;
+
+    let data_json = serde_json::to_string(&data).map_err(|_| create_error!(InternalError))?;
+    info!("bot-server:\nurl:{url}\ndata:{data_json}\nresponse:{response}");
+    Ok(())
 }
 
 #[cfg(test)]

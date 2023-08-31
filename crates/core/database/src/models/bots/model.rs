@@ -39,6 +39,10 @@ auto_derived_partial!(
         /// Enum of bot flags
         #[serde(skip_serializing_if = "Option::is_none")]
         pub flags: Option<i32>,
+
+        /// Bot server invite code
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub server_invite: Option<String>,
     },
     "PartialBot"
 );
@@ -82,6 +86,7 @@ impl Default for Bot {
             privacy_policy_url: Default::default(),
             flags: Default::default(),
             bot_type: Default::default(),
+            server_invite: Default::default(),
         }
     }
 }
