@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use revolt_database::{Bot, BotType, Channel, Database, Invite, Member, PartialBot, Server, User};
 use revolt_models::v0;
 use revolt_permissions::DEFAULT_PERMISSION_SERVER;
@@ -7,6 +5,7 @@ use revolt_quark::variables::delta::BOT_SERVER_PUBLIC_URL;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
+use std::collections::HashMap;
 use ulid::Ulid;
 use validator::Validate;
 
@@ -64,12 +63,14 @@ pub async fn create_bot(
 
     owner.bot = Some(bot_information.clone().into());
 
-    let invite = create_default_channel_for_bot(db, info.name.clone(), &owner).await?;
+    let (server, channel) = create_default_channel_for_bot(db, info.name.clone(), &owner).await?;
 
     let mut invite_code: Option<String> = None;
     let mut server_id: Option<String> = None;
 
-    if let Invite::Server { code, server, .. } = invite {
+    if let Invite::Server { code, server, .. } =
+        Invite::create_channel_invite(db, user.id.clone(), &channel).await?
+    {
         invite_code = Some(code);
         server_id = Some(server);
     }
@@ -87,21 +88,13 @@ pub async fn create_bot(
     )
     .await?;
 
+    let bot_user = db.fetch_user(&bot.id).await?;
+
+    Member::create(db, &server, &user).await?;
+    Member::create(db, &server, &bot_user).await?;
+
     if bot_type == BotType::PromptBot && !(*BOT_SERVER_PUBLIC_URL).is_empty() {
-        let model = bot_information.model.unwrap_or(Default::default());
-
-        let data = CreatePromptBotReq {
-            user_id: bot.owner.clone(),
-            user_name: user.username.clone(),
-            bot_id: bot.id.clone(),
-            bot_name: info.name,
-            bot_token: bot.token.clone(),
-            model_name: model.model_name,
-            prompt_template: model.prompts.system_prompt,
-            temperature: model.temperature,
-        };
-
-        let _ = create_bot_at_bot_server(&data).await;
+        let _ = create_bot_at_bot_server(&bot, &bot_user, &user).await;
     }
 
     Ok(Json(bot.into()))
@@ -111,7 +104,7 @@ async fn create_default_channel_for_bot(
     db: &Database,
     bot_name: String,
     user: &User,
-) -> Result<Invite> {
+) -> Result<(Server, Channel)> {
     let channel_id = Ulid::new().to_string();
     let server_id = Ulid::new().to_string();
 
@@ -141,12 +134,23 @@ async fn create_default_channel_for_bot(
     };
 
     server.create(db).await?;
-    Member::create(db, &server, user).await?;
-    let invite = Invite::create_channel_invite(db, user.id.clone(), &channel).await?;
-    Ok(invite)
+    Ok((server, channel))
 }
 
-async fn create_bot_at_bot_server(data: &CreatePromptBotReq) -> Result<()> {
+async fn create_bot_at_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) -> Result<()> {
+    let model = bot_user.bot.as_ref().unwrap().model.as_ref().unwrap();
+
+    let data = CreatePromptBotReq {
+        user_id: bot_owner.id.clone(),
+        user_name: bot_owner.username.clone(),
+        bot_id: bot.id.clone(),
+        bot_name: bot_user.username.clone(),
+        bot_token: bot.token.clone(),
+        model_name: model.model_name.clone(),
+        prompt_template: model.prompts.system_prompt.clone(),
+        temperature: model.temperature,
+    };
+
     let host = BOT_SERVER_PUBLIC_URL.to_string();
     let url = format!("{host}/api/rest/v1/bot/create");
     let client = reqwest::Client::new();
