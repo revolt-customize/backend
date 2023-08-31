@@ -31,7 +31,6 @@ impl From<crate::Bot> for Bot {
             privacy_policy_url: value.privacy_policy_url,
             flags: value.flags.unwrap_or_default() as u32,
             bot_type: value.bot_type.map(|x| x.into()),
-            default_server: value.default_server,
             server_invite: value.server_invite,
         }
     }

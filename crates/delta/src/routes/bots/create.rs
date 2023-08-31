@@ -66,13 +66,11 @@ pub async fn create_bot(
     let (server, channel) = create_default_channel_for_bot(db, info.name.clone(), &owner).await?;
 
     let mut invite_code: Option<String> = None;
-    let mut server_id: Option<String> = None;
 
-    if let Invite::Server { code, server, .. } =
+    if let Invite::Server { code, .. } =
         Invite::create_channel_invite(db, user.id.clone(), &channel).await?
     {
         invite_code = Some(code);
-        server_id = Some(server);
     }
 
     let bot = Bot::create(
@@ -81,7 +79,6 @@ pub async fn create_bot(
         &owner,
         PartialBot {
             bot_type: Some(bot_type.clone()),
-            default_server: server_id,
             server_invite: invite_code,
             ..Default::default()
         },
