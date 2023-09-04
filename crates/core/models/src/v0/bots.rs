@@ -62,6 +62,10 @@ auto_derived!(
         /// Bot server invite code
         #[serde(skip_serializing_if = "Option::is_none")]
         pub server_invite: Option<String>,
+
+        /// Bot's default server
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub default_server: Option<String>,
     }
 
     /// Optional fields on bot object

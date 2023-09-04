@@ -43,6 +43,10 @@ auto_derived_partial!(
         /// Bot server invite code
         #[serde(skip_serializing_if = "Option::is_none")]
         pub server_invite: Option<String>,
+
+        /// Bot's default server
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub default_server: Option<String>,
     },
     "PartialBot"
 );
@@ -87,6 +91,7 @@ impl Default for Bot {
             flags: Default::default(),
             bot_type: Default::default(),
             server_invite: Default::default(),
+            default_server: Default::default(),
         }
     }
 }

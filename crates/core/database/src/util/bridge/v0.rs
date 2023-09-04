@@ -32,6 +32,7 @@ impl From<crate::Bot> for Bot {
             flags: value.flags.unwrap_or_default() as u32,
             bot_type: value.bot_type.map(|x| x.into()),
             server_invite: value.server_invite,
+            default_server: value.default_server,
         }
     }
 }
