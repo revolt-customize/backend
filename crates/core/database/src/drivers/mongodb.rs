@@ -155,13 +155,23 @@ impl MongoDb {
             }
         }
 
-        let query = doc! {
-            "$unset": unset,
-            "$set": if let Some(prefix) = &prefix {
-                to_document(&prefix_keys(&partial, prefix))
-            } else {
-                to_document(&partial)
-            }?
+        let query = if unset.is_empty() {
+            doc! {
+                "$set": if let Some(prefix) = &prefix {
+                    to_document(&prefix_keys(&partial, prefix))
+                } else {
+                    to_document(&partial)
+                }?
+            }
+        } else {
+            doc! {
+                "$unset": unset,
+                "$set": if let Some(prefix) = &prefix {
+                    to_document(&prefix_keys(&partial, prefix))
+                } else {
+                    to_document(&partial)
+                }?
+            }
         };
 
         self.col::<Document>(collection)

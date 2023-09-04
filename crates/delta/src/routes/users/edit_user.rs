@@ -80,8 +80,6 @@ pub async fn req(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let mut bot_information: Option<BotInformation> = None;
-
     // If we want to edit a different user than self, ensure we have
     // permissions and subsequently replace the user in question
     if target.id != "@me" && target.id != user.id {
@@ -95,8 +93,6 @@ pub async fn req(
         if !is_bot_owner && !user.privileged {
             return Err(Error::NotPrivileged);
         }
-
-        bot_information = target_user.bot;
     }
 
     // Otherwise, filter out invalid edit fields
@@ -180,7 +176,8 @@ pub async fn req(
 
     // 5. Edit bot field
     if let Some(bot) = data.bot {
-        partial.bot = bot_information.as_mut().map(|x| {
+        let mut target_user = target.as_user(db).await?;
+        partial.bot = target_user.bot.as_mut().map(|x| {
             x.model = bot.model;
             x.clone()
         });
@@ -194,9 +191,136 @@ pub async fn req(
 
 #[cfg(test)]
 mod tests {
+    use revolt_database::{Bot, PartialBot};
+    use revolt_models::v0;
+    use revolt_quark::models::{
+        prompt::{BotModel, PromptTemplate},
+        user::BotInformation,
+    };
+    use rocket::http::{ContentType, Header, Status};
     use validator::Validate;
 
-    use crate::routes::users::edit_user::DataEditUser;
+    use crate::{routes::users::edit_user::DataEditUser, util::test::TestHarness};
+
+    #[rocket::async_test]
+    async fn edit_user_bot() {
+        let harness = TestHarness::new().await;
+        let (_, session, mut user) = harness.new_user().await;
+
+        user.bot = Some(
+            v0::BotInformation {
+                owner_id: user.id.clone(),
+                model: Some(v0::BotModel {
+                    model_name: "gpt".into(),
+                    prompts: v0::PromptTemplate {
+                        system_prompt: "you are a developer".into(),
+                    },
+                    temperature: 0.5,
+                }),
+            }
+            .into(),
+        );
+
+        let bot = Bot::create(
+            &harness.db,
+            TestHarness::rand_string(),
+            &user,
+            PartialBot {
+                bot_type: Some(v0::BotType::PromptBot.into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("creating bot");
+
+        let response = harness
+            .client
+            .patch(format!("/users/{}", bot.id.clone()))
+            .header(Header::new("x-bot-token", bot.token.clone()))
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(
+                json!(DataEditUser {
+                    display_name: None,
+                    avatar: None,
+                    status: None,
+                    profile: None,
+                    badges: None,
+                    flags: None,
+                    bot: Some(BotInformation {
+                        owner: "new_owner_id".into(),
+                        model: Some(BotModel {
+                            model_name: "bot-edited".into(),
+                            prompts: PromptTemplate {
+                                system_prompt: "new prompt".into()
+                            },
+                            temperature: 0.6,
+                        })
+                    }),
+                    remove: None,
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        harness.db.fetch_bot(&bot.id).await.expect("get bot");
+        let bot_user_after_edited = harness
+            .db
+            .fetch_user(&bot.id.clone())
+            .await
+            .expect("get user_bot");
+
+        assert_eq!(
+            bot_user_after_edited.bot.unwrap(),
+            v0::BotInformation {
+                owner_id: bot.owner.clone(),
+                model: Some(v0::BotModel {
+                    model_name: "bot-edited".into(),
+                    prompts: v0::PromptTemplate {
+                        system_prompt: "new prompt".into()
+                    },
+                    temperature: 0.6,
+                })
+            }
+            .into()
+        );
+    }
+
+    #[rocket::async_test]
+    async fn edit_at_me() {
+        let harness = TestHarness::new().await;
+        let (_, session, user) = harness.new_user().await;
+
+        let response = harness
+            .client
+            .patch("/users/@me")
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(
+                json!(DataEditUser {
+                    display_name: Some("new_name".into()),
+                    avatar: None,
+                    status: None,
+                    profile: None,
+                    badges: None,
+                    flags: None,
+                    bot: None,
+                    remove: None,
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        // println!("{:?}", response.into_string().await);
+        assert_eq!(response.status(), Status::Ok);
+
+        let edited_user = harness.db.fetch_user(&user.id).await.expect("get user");
+        assert_eq!(edited_user.display_name, Some("new_name".into()));
+    }
 
     #[test]
     fn test_validate() {

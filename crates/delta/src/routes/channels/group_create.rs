@@ -1,13 +1,15 @@
 use std::{collections::HashSet, iter::FromIterator};
 
+use revolt_models::v0;
 use revolt_quark::{
     get_relationship,
-    models::{user::RelationshipStatus, Channel, User},
-    variables::delta::MAX_GROUP_SIZE,
-    Db, Error, Result,
+    models::user::{RelationshipStatus, User},
+    variables::delta::{MAX_GROUP_SIZE, OFFICIAL_MODEL_BOTS},
 };
 
-use rocket::serde::json::Json;
+use revolt_database::{Channel, Database};
+use revolt_result::{create_error, Result};
+use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use validator::Validate;
@@ -36,38 +38,44 @@ pub struct DataCreateGroup {
 /// Create a new group channel.
 #[openapi(tag = "Groups")]
 #[post("/create", data = "<info>")]
-pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Json<Channel>> {
+pub async fn req(
+    db: &State<Database>,
+    user: User,
+    info: Json<DataCreateGroup>,
+) -> Result<Json<v0::Channel>> {
     if user.bot.is_some() {
-        return Err(Error::IsBot);
+        return Err(create_error!(IsBot));
     }
 
     let info = info.into_inner();
-    info.validate()
-        .map_err(|error| Error::FailedValidation { error })?;
+    info.validate().map_err(|error| {
+        create_error!(FailedValidation {
+            error: error.to_string()
+        })
+    })?;
 
     let mut set: HashSet<String> = HashSet::from_iter(info.users.into_iter());
     set.insert(user.id.clone());
 
     if set.len() > *MAX_GROUP_SIZE {
-        return Err(Error::GroupTooLarge {
+        return Err(create_error!(GroupTooLarge {
             max: *MAX_GROUP_SIZE,
-        });
+        }));
     }
 
     for target in &set {
         match get_relationship(&user, target) {
             RelationshipStatus::Friend | RelationshipStatus::User => {}
             _ => {
-                return Err(Error::NotFriends);
+                return Err(create_error!(NotFriends));
             }
         }
     }
 
-    let group = Channel::Group {
+    let mut group = Channel::Group {
         id: Ulid::new().to_string(),
-
         name: info.name,
-        owner: user.id,
+        owner: user.id.clone(),
         description: info.description,
         recipients: set.into_iter().collect::<Vec<String>>(),
 
@@ -80,5 +88,25 @@ pub async fn req(db: &Db, user: User, info: Json<DataCreateGroup>) -> Result<Jso
     };
 
     group.create(db).await?;
-    Ok(Json(group))
+
+    add_official_prompt_bots(db, user.id.clone(), &mut group).await?;
+
+    Ok(Json(group.into()))
+}
+
+/// add official prompts bot for any new created group
+async fn add_official_prompt_bots(
+    db: &Database,
+    user_id: String,
+    group: &mut Channel,
+) -> Result<()> {
+    if (*OFFICIAL_MODEL_BOTS).is_empty() {
+        return Ok(());
+    }
+
+    for bot in db.fetch_users(OFFICIAL_MODEL_BOTS.as_slice()).await? {
+        group.add_user_to_group(&db.clone(), &bot, &user_id).await?;
+    }
+
+    Ok(())
 }

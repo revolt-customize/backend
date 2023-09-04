@@ -40,13 +40,13 @@ auto_derived_partial!(
         #[serde(skip_serializing_if = "Option::is_none")]
         pub flags: Option<i32>,
 
-        /// Bor default server
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub default_server: Option<String>,
-
         /// Bot server invite code
         #[serde(skip_serializing_if = "Option::is_none")]
         pub server_invite: Option<String>,
+
+        /// Bot's default server
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub default_server: Option<String>,
     },
     "PartialBot"
 );
@@ -90,8 +90,8 @@ impl Default for Bot {
             privacy_policy_url: Default::default(),
             flags: Default::default(),
             bot_type: Default::default(),
-            default_server: Default::default(),
             server_invite: Default::default(),
+            default_server: Default::default(),
         }
     }
 }

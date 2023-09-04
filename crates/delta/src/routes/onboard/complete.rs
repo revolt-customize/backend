@@ -45,15 +45,11 @@ pub async fn req(
             error: error.to_string()
         })
     })?;
+    let new_user = User::create(db, data.username, session.user_id, None).await?;
 
-    prepare_on_board_data(db, session.user_id.clone()).await?;
+    prepare_on_board_data(db, new_user.id.clone()).await?;
 
-    Ok(Json(
-        User::create(db, data.username, session.user_id, None)
-            .await?
-            .into_self()
-            .await,
-    ))
+    Ok(Json(new_user.into_self().await))
 }
 
 /// prepare on board data for the first time login
@@ -63,10 +59,9 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
     }
 
     let id = Ulid::new().to_string();
-    let mut users = vec![user_id.clone()];
-    users.extend((*OFFICIAL_MODEL_BOTS).clone());
+    let users = vec![user_id.clone()];
 
-    let group = Channel::Group {
+    let mut group = Channel::Group {
         id,
         name: String::from("多模型群聊"),
         owner: user_id.clone(),
@@ -80,5 +75,84 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
 
     group.create(db).await?;
 
+    for bot in db.fetch_users(OFFICIAL_MODEL_BOTS.as_slice()).await? {
+        group.add_user_to_group(db, &bot, &user_id).await?;
+
+        Channel::DirectMessage {
+            id: Ulid::new().to_string(),
+            active: false,
+            recipients: vec![bot.id, user_id.clone()],
+            last_message_id: None,
+        }
+        .create(db)
+        .await?;
+    }
+
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use crate::{rocket, routes::onboard::complete::DataOnboard, util::test::TestHarness};
+    use revolt_database::Channel;
+    use revolt_models::v0;
+    use revolt_quark::variables::delta::OFFICIAL_MODEL_BOTS;
+    use rocket::http::{ContentType, Header, Status};
+
+    #[rocket::async_test]
+    async fn test_on_board_compelete() {
+        let harness = TestHarness::new().await;
+        let (_, session) = harness.new_account_session().await;
+
+        let response = harness
+            .client
+            .post("/onboard/complete")
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(
+                json!(DataOnboard {
+                    username: "cac".into()
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+        let status = response.status();
+        // println!("{:}", response.into_string().await.unwrap());
+        assert_eq!(status, Status::Ok);
+
+        let user = response.into_json::<v0::User>().await.unwrap();
+        let channels = harness.db.find_direct_messages(&user.id).await.unwrap();
+
+        assert_eq!(channels.len(), 3);
+
+        let mut match_cnt = 0;
+
+        for channel in channels.into_iter() {
+            match channel {
+                Channel::Group {
+                    owner, recipients, ..
+                } => {
+                    assert_eq!(owner, user.id);
+                    let set: HashSet<String> = recipients.into_iter().collect();
+                    let mut expect = HashSet::new();
+                    expect.insert(user.id.clone());
+                    for id in OFFICIAL_MODEL_BOTS.as_slice() {
+                        expect.insert(id.clone());
+                    }
+                    assert_eq!(set, expect);
+                    match_cnt += 1;
+                }
+
+                Channel::DirectMessage { .. } => {
+                    match_cnt += 1;
+                }
+                _ => panic!("error"),
+            }
+        }
+
+        assert_eq!(3, match_cnt);
+    }
 }

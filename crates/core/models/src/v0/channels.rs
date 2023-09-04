@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 auto_derived!(
     /// Channel
+    #[cfg_attr(feature = "serde", serde(tag = "channel_type"))]
     pub enum Channel {
         /// Personal "Saved Notes" channel which allows users to save messages
         SavedMessages {
