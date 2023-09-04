@@ -76,7 +76,16 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
     group.create(db).await?;
 
     for bot in db.fetch_users(OFFICIAL_MODEL_BOTS.as_slice()).await? {
-        group.add_user_to_group(&db.clone(), &bot, &user_id).await?;
+        group.add_user_to_group(db, &bot, &user_id).await?;
+
+        Channel::DirectMessage {
+            id: Ulid::new().to_string(),
+            active: false,
+            recipients: vec![bot.id, user_id.clone()],
+            last_message_id: None,
+        }
+        .create(db)
+        .await?;
     }
 
     Ok(())
@@ -115,22 +124,35 @@ mod tests {
         assert_eq!(status, Status::Ok);
 
         let user = response.into_json::<v0::User>().await.unwrap();
-        let mut channels = harness.db.find_direct_messages(&user.id).await.unwrap();
+        let channels = harness.db.find_direct_messages(&user.id).await.unwrap();
 
-        assert_eq!(channels.len(), 1);
+        assert_eq!(channels.len(), 3);
 
-        if let Channel::Group {
-            owner, recipients, ..
-        } = channels.pop().unwrap()
-        {
-            assert_eq!(owner, user.id);
-            let set: HashSet<String> = recipients.into_iter().collect();
-            let mut expect = HashSet::new();
-            expect.insert(user.id.clone());
-            for id in OFFICIAL_MODEL_BOTS.as_slice() {
-                expect.insert(id.clone());
+        let mut match_cnt = 0;
+
+        for channel in channels.into_iter() {
+            match channel {
+                Channel::Group {
+                    owner, recipients, ..
+                } => {
+                    assert_eq!(owner, user.id);
+                    let set: HashSet<String> = recipients.into_iter().collect();
+                    let mut expect = HashSet::new();
+                    expect.insert(user.id.clone());
+                    for id in OFFICIAL_MODEL_BOTS.as_slice() {
+                        expect.insert(id.clone());
+                    }
+                    assert_eq!(set, expect);
+                    match_cnt += 1;
+                }
+
+                Channel::DirectMessage { .. } => {
+                    match_cnt += 1;
+                }
+                _ => panic!("error"),
             }
-            assert_eq!(set, expect);
-        };
+        }
+
+        assert_eq!(3, match_cnt);
     }
 }
