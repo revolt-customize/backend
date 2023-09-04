@@ -80,7 +80,7 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
 
         Channel::DirectMessage {
             id: Ulid::new().to_string(),
-            active: false,
+            active: true,
             recipients: vec![bot.id, user_id.clone()],
             last_message_id: None,
         }
