@@ -80,11 +80,10 @@ pub async fn req(
     data.validate()
         .map_err(|error| Error::FailedValidation { error })?;
 
-    let mut target_user = target.as_user(db).await?;
-
     // If we want to edit a different user than self, ensure we have
     // permissions and subsequently replace the user in question
     if target.id != "@me" && target.id != user.id {
+        let target_user = target.as_user(db).await?;
         let is_bot_owner = target_user
             .bot
             .as_ref()
@@ -177,6 +176,7 @@ pub async fn req(
 
     // 5. Edit bot field
     if let Some(bot) = data.bot {
+        let mut target_user = target.as_user(db).await?;
         partial.bot = target_user.bot.as_mut().map(|x| {
             x.model = bot.model;
             x.clone()
@@ -237,7 +237,7 @@ mod tests {
             .client
             .patch(format!("/users/{}", bot.id.clone()))
             .header(Header::new("x-bot-token", bot.token.clone()))
-            .header(Header::new("x-session-token", session.id.to_string()))
+            .header(Header::new("x-session-token", session.token.to_string()))
             .header(ContentType::JSON)
             .body(
                 json!(DataEditUser {
@@ -287,6 +287,39 @@ mod tests {
             }
             .into()
         );
+    }
+
+    #[rocket::async_test]
+    async fn edit_at_me() {
+        let harness = TestHarness::new().await;
+        let (_, session, user) = harness.new_user().await;
+
+        let response = harness
+            .client
+            .patch("/users/@me")
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(
+                json!(DataEditUser {
+                    display_name: Some("new_name".into()),
+                    avatar: None,
+                    status: None,
+                    profile: None,
+                    badges: None,
+                    flags: None,
+                    bot: None,
+                    remove: None,
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        // println!("{:?}", response.into_string().await);
+        assert_eq!(response.status(), Status::Ok);
+
+        let edited_user = harness.db.fetch_user(&user.id).await.expect("get user");
+        assert_eq!(edited_user.display_name, Some("new_name".into()));
     }
 
     #[test]

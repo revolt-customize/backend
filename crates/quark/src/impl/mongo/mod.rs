@@ -183,16 +183,29 @@ impl MongoDb {
             }
         }
 
-        let query = doc! {
-            "$unset": unset,
-            "$set": if let Some(prefix) = &prefix {
-                to_document(&prefix_keys(&partial, prefix))
-            } else {
-                to_document(&partial)
-            }.map_err(|_| Error::DatabaseError {
-                operation: "to_document",
-                with: collection
-            })?
+        let query = if unset.is_empty() {
+            doc! {
+                "$set": if let Some(prefix) = &prefix {
+                    to_document(&prefix_keys(&partial, prefix))
+                } else {
+                    to_document(&partial)
+                }.map_err(|_| Error::DatabaseError {
+                    operation: "to_document",
+                    with: collection
+                })?
+            }
+        } else {
+            doc! {
+                "$unset": unset,
+                "$set": if let Some(prefix) = &prefix {
+                    to_document(&prefix_keys(&partial, prefix))
+                } else {
+                    to_document(&partial)
+                }.map_err(|_| Error::DatabaseError {
+                    operation: "to_document",
+                    with: collection
+                })?
+            }
         };
 
         self.col::<Document>(collection)

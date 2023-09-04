@@ -1,6 +1,5 @@
 use super::users::BotModel;
 use super::User;
-
 use validator::Validate;
 
 auto_derived!(
@@ -63,6 +62,10 @@ auto_derived!(
         /// Bot server invite code
         #[serde(skip_serializing_if = "Option::is_none")]
         pub server_invite: Option<String>,
+
+        /// Bot's default server
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub default_server: Option<String>,
     }
 
     /// Optional fields on bot object
@@ -158,7 +161,6 @@ auto_derived_with_no_eq!(
     }
 
     /// Bot Details
-    #[derive(Default)]
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct DataCreateBot {
         /// Bot username
@@ -184,3 +186,30 @@ auto_derived_with_no_eq!(
         pub users: Vec<User>,
     }
 );
+
+#[cfg(test)]
+#[cfg(feature = "validator")]
+mod tests {
+    use crate::v0::{BotModel, BotType, DataCreateBot, PromptTemplate};
+    use validator::Validate;
+
+    #[test]
+    fn test_validate() {
+        let mut bot = DataCreateBot {
+            name: "mybot".into(),
+            bot_type: Some(BotType::PromptBot),
+            model: Some(BotModel {
+                model_name: "gpt4".into(),
+                prompts: PromptTemplate {
+                    system_prompt: "".into(),
+                },
+                temperature: 2.0,
+            }),
+        };
+
+        assert!(bot.validate().map_err(|e| println!("{e}")).is_err());
+
+        bot.model.as_mut().unwrap().temperature = 0.5;
+        assert!(bot.validate().map_err(|e| println!("{e}")).is_ok());
+    }
+}
