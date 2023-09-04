@@ -45,7 +45,6 @@ pub async fn req(
             error: error.to_string()
         })
     })?;
-
     let new_user = User::create(db, data.username, session.user_id, None).await?;
 
     prepare_on_board_data(db, new_user.id.clone()).await?;
@@ -75,8 +74,8 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
     };
 
     group.create(db).await?;
-    let bot_users = db.fetch_users(OFFICIAL_MODEL_BOTS.as_slice()).await?;
-    for bot in bot_users {
+
+    for bot in db.fetch_users(OFFICIAL_MODEL_BOTS.as_slice()).await? {
         group.add_user_to_group(&db.clone(), &bot, &user_id).await?;
     }
 
@@ -85,7 +84,11 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use crate::{rocket, routes::onboard::complete::DataOnboard, util::test::TestHarness};
+    use revolt_database::Channel;
+    use revolt_models::v0;
     use revolt_quark::variables::delta::OFFICIAL_MODEL_BOTS;
     use rocket::http::{ContentType, Header, Status};
 
@@ -93,14 +96,6 @@ mod tests {
     async fn test_on_board_compelete() {
         let harness = TestHarness::new().await;
         let (_, session) = harness.new_account_session().await;
-
-        let mut users = vec![];
-        users.extend((*OFFICIAL_MODEL_BOTS).clone());
-        for user_bot in users {
-            // let _ = harness.db.delete_user(&user_bot).await;
-            // let _ = User::create(&harness.db, user_bot.clone(), Some(user_bot.clone()), None).await;
-            println!("{user_bot}");
-        }
 
         let response = harness
             .client
@@ -115,8 +110,27 @@ mod tests {
             )
             .dispatch()
             .await;
-
-        assert_eq!(response.status(), Status::Ok);
+        let status = response.status();
         // println!("{:}", response.into_string().await.unwrap());
+        assert_eq!(status, Status::Ok);
+
+        let user = response.into_json::<v0::User>().await.unwrap();
+        let mut channels = harness.db.find_direct_messages(&user.id).await.unwrap();
+
+        assert_eq!(channels.len(), 1);
+
+        if let Channel::Group {
+            owner, recipients, ..
+        } = channels.pop().unwrap()
+        {
+            assert_eq!(owner, user.id);
+            let set: HashSet<String> = recipients.into_iter().collect();
+            let mut expect = HashSet::new();
+            expect.insert(user.id.clone());
+            for id in OFFICIAL_MODEL_BOTS.as_slice() {
+                expect.insert(id.clone());
+            }
+            assert_eq!(set, expect);
+        };
     }
 }
