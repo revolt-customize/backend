@@ -149,6 +149,9 @@ pub struct Message {
     /// Message Components
     #[serde(skip_serializing_if = "Option::is_none")]
     pub components: Option<Vec<Component>>,
+    /// Session ID of the message which created by bot's developer
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
     /// The webhook that sent this message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook: Option<MessageWebhook>,
@@ -305,6 +308,8 @@ pub struct DataMessageSend {
     pub interactions: Option<Interactions>,
     /// Message components
     pub components: Option<Vec<Component>>,
+    /// Session ID of the message which created by bot's developer
+    pub session_id: Option<String>,
 }
 
 #[derive(Validate, Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
@@ -351,6 +356,7 @@ mod tests {
             nonce: Some("01H7SQZXX0WRGCEB2JBTKKPAV4".into()),
             channel: "01H6ZYSC1X92SQNAD90QXTY8ER".into(),
             author: "01H6ZWPCCKQ4J46D088HBY5ZP4".into(),
+            session_id: None,
             is_stream: None,
             components: Some(vec![
                 Component {

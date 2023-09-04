@@ -456,6 +456,7 @@ impl Channel {
             id: message_id.clone(),
             is_stream,
             channel: self.id().to_string(),
+            session_id: data.session_id,
             masquerade: data.masquerade,
             interactions: data.interactions.unwrap_or_default(),
             components: data.components,
