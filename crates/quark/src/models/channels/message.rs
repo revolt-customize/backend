@@ -83,15 +83,22 @@ pub enum SystemMessage {
 pub enum ComponentType {
     #[serde(rename = "button")]
     Button,
+    #[serde(rename = "lineBreak")]
+    LineBreak,
+    #[serde(rename = "status")]
+    Status,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate)]
 pub struct Component {
     #[serde(rename = "type")]
     pub component_type: ComponentType,
-    pub label: String,
-    pub style: String,
-    pub enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
 }
 
 /// Name and / or avatar override information
