@@ -4,7 +4,7 @@ use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use revolt_models::v0::MessageWebhook;
+use revolt_models::v0::{Component, MessageWebhook};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -77,28 +77,6 @@ pub enum SystemMessage {
     ChannelIconChanged { by: String },
     #[serde(rename = "channel_ownership_changed")]
     ChannelOwnershipChanged { from: String, to: String },
-}
-
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
-pub enum ComponentType {
-    #[serde(rename = "button")]
-    Button,
-    #[serde(rename = "lineBreak")]
-    LineBreak,
-    #[serde(rename = "status")]
-    Status,
-}
-
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate)]
-pub struct Component {
-    #[serde(rename = "type")]
-    pub component_type: ComponentType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub style: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub enabled: Option<bool>,
 }
 
 /// Name and / or avatar override information
@@ -330,12 +308,13 @@ pub struct Interaction {
 
 #[cfg(test)]
 mod tests {
+    use revolt_models::v0::Component;
     use serde_json::json;
 
     use crate::{
         events::client::EventV1,
         models::{
-            message::{Component, ComponentType, Interaction, Interactions},
+            message::{Interaction, Interactions},
             Message,
         },
     };
@@ -366,17 +345,19 @@ mod tests {
             session_id: None,
             is_stream: None,
             components: Some(vec![
-                Component {
-                    component_type: ComponentType::Button,
-                    label: Some("继续".into()),
-                    style: Some("color:green ".into()),
-                    enabled: Some(false),
+                Component::Button {
+                    label: "继续".into(),
+                    style: "color:green ".into(),
+                    enabled: false,
                 },
-                Component {
-                    component_type: ComponentType::Button,
-                    label: Some("重试".into()),
-                    style: Some("color:red ".into()),
-                    enabled: Some(false),
+                Component::Button {
+                    label: "重试".into(),
+                    style: "color:red ".into(),
+                    enabled: false,
+                },
+                Component::LineBreak,
+                Component::Status {
+                    label: "正在处理".into(),
                 },
             ]),
             webhook: None,

@@ -1,6 +1,7 @@
+use revolt_models::v0::Component;
 use revolt_quark::{
     models::message::{PartialMessage, SendableEmbed},
-    models::{message::Component, Message, User},
+    models::{Message, User},
     perms,
     types::january::Embed,
     Db, Error, Permission, Ref, Result, Timestamp,

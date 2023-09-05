@@ -172,17 +172,19 @@ auto_derived!(
         #[serde(flatten)]
         pub time_period: MessageTimePeriod,
     }
-    pub struct Component {
-        #[serde(rename = "type")]
-        pub component_type: ComponentType,
-        pub label: String,
-        pub style: String,
-        pub enabled: bool,
-    }
 
-    pub enum ComponentType {
+    #[serde(tag = "type")]
+    pub enum Component {
         #[serde(rename = "button")]
-        Button,
+        Button {
+            label: String,
+            style: String,
+            enabled: bool,
+        },
+        #[serde(rename = "line_break")]
+        LineBreak,
+        #[serde(rename = "status")]
+        Status { label: String },
     }
 
     pub struct Interaction {
