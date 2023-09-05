@@ -322,6 +322,24 @@ mod tests {
         assert_eq!(edited_user.display_name, Some("new_name".into()));
     }
 
+    #[rocket::async_test]
+    async fn remove_backgroud_profile() {
+        let harness = TestHarness::new().await;
+        let (_, session, _) = harness.new_user().await;
+
+        let response = harness
+            .client
+            .patch("/users/@me")
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(json!({"remove":["ProfileBackground"]}).to_string())
+            .dispatch()
+            .await;
+
+        // println!("{:?}", response.into_string().await);
+        assert_eq!(response.status(), Status::Ok);
+    }
+
     #[test]
     fn test_validate() {
         let bot_data = json!({

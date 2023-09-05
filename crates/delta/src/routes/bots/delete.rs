@@ -25,7 +25,8 @@ pub async fn delete_bot(
 mod test {
     use crate::{rocket, util::test::TestHarness};
     use revolt_database::{events::client::EventV1, Bot};
-    use rocket::http::{Header, Status};
+    use revolt_models::v0;
+    use rocket::http::{ContentType, Header, Status};
 
     #[rocket::async_test]
     async fn delete_bot() {
@@ -60,5 +61,63 @@ mod test {
             }
             _ => unreachable!(),
         }
+    }
+
+    #[rocket::async_test]
+    async fn delete_bot_and_default_server() {
+        let harness = TestHarness::new().await;
+        let (_, session, _) = harness.new_user().await;
+
+        // create bot
+        let response = harness
+            .client
+            .post("/bots/create")
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .header(ContentType::JSON)
+            .body(
+                json!(v0::DataCreateBot {
+                    name: TestHarness::rand_string(),
+                    bot_type: Some(v0::BotType::PromptBot),
+                    model: Some(Default::default())
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let bot: v0::Bot = response.into_json().await.expect("`Bot`");
+        assert!(harness.db.fetch_bot(&bot.id).await.is_ok());
+
+        assert!(harness
+            .db
+            .fetch_member(bot.default_server.as_ref().unwrap(), &bot.id)
+            .await
+            .is_ok());
+
+        let response = harness
+            .client
+            .delete(format!("/bots/{}", bot.id))
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::NoContent);
+        assert!(harness.db.fetch_bot(&bot.id).await.is_err());
+        drop(response);
+
+        let server = harness
+            .db
+            .fetch_server(bot.default_server.as_ref().unwrap())
+            .await
+            .unwrap();
+
+        assert!(server.name.contains("deleted"));
+        assert!(harness
+            .db
+            .fetch_member(bot.default_server.as_ref().unwrap(), &bot.id)
+            .await
+            .is_err());
     }
 }

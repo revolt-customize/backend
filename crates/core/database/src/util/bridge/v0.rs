@@ -315,21 +315,20 @@ impl From<crate::Metadata> for Metadata {
     }
 }
 
-impl From<crate::ComponentType> for ComponentType {
-    fn from(value: crate::ComponentType) -> Self {
-        match value {
-            crate::ComponentType::Button => ComponentType::Button,
-        }
-    }
-}
-
 impl From<crate::Component> for Component {
     fn from(value: crate::Component) -> Self {
-        Component {
-            component_type: value.component_type.into(),
-            label: value.label,
-            style: value.style,
-            enabled: value.enabled,
+        match value {
+            crate::Component::Button {
+                label,
+                style,
+                enabled,
+            } => Component::Button {
+                label,
+                style,
+                enabled,
+            },
+            crate::Component::LineBreak => Component::LineBreak,
+            crate::Component::Status { label } => Component::Status { label },
         }
     }
 }

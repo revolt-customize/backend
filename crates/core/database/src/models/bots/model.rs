@@ -1,7 +1,7 @@
 use revolt_result::Result;
 use ulid::Ulid;
 
-use crate::{Database, PartialUser, User};
+use crate::{Database, PartialServer, PartialUser, User};
 
 auto_derived_partial!(
     /// Bot
@@ -171,7 +171,29 @@ impl Bot {
     /// Delete this bot
     pub async fn delete(&self, db: &Database) -> Result<()> {
         db.fetch_user(&self.id).await?.mark_deleted(db).await?;
-        db.delete_bot(&self.id).await
+        db.delete_bot(&self.id).await?;
+
+        if let Some(ref default_server) = self.default_server {
+            let mut server = db.fetch_server(default_server).await?;
+            server
+                .update(
+                    db,
+                    PartialServer {
+                        name: Some(format!("{} (deleted)", server.name)),
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+                .await?;
+
+            db.delete_member(&crate::MemberCompositeKey {
+                server: server.id.clone(),
+                user: self.id.clone(),
+            })
+            .await?;
+        }
+
+        Ok(())
     }
 }
 
