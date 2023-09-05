@@ -83,15 +83,22 @@ pub enum SystemMessage {
 pub enum ComponentType {
     #[serde(rename = "button")]
     Button,
+    #[serde(rename = "lineBreak")]
+    LineBreak,
+    #[serde(rename = "status")]
+    Status,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Validate)]
 pub struct Component {
     #[serde(rename = "type")]
     pub component_type: ComponentType,
-    pub label: String,
-    pub style: String,
-    pub enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
 }
 
 /// Name and / or avatar override information
@@ -361,15 +368,15 @@ mod tests {
             components: Some(vec![
                 Component {
                     component_type: ComponentType::Button,
-                    label: "继续".into(),
-                    style: "color:green ".into(),
-                    enabled: false,
+                    label: Some("继续".into()),
+                    style: Some("color:green ".into()),
+                    enabled: Some(false),
                 },
                 Component {
                     component_type: ComponentType::Button,
-                    label: "重试".into(),
-                    style: "color:red ".into(),
-                    enabled: false,
+                    label: Some("重试".into()),
+                    style: Some("color:red ".into()),
+                    enabled: Some(false),
                 },
             ]),
             webhook: None,
