@@ -10,6 +10,7 @@ mod fetch_owned;
 mod fetch_public;
 mod invite;
 mod search_bots;
+mod start_prompt_bot;
 
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
@@ -22,5 +23,6 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         delete::delete_bot,
         fetch_discover::fetch_discoverable_bots,
         search_bots::req,
+        start_prompt_bot::req,
     ]
 }
