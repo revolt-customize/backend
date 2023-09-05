@@ -4,14 +4,6 @@ use revolt_quark::variables::delta::BOT_SERVER_PUBLIC_URL;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct StartPromptBotResponse {
-    pub code: i32,
-    pub data: serde_json::Value,
-    pub msg: String,
-}
 
 /// # Start a prompt Bot
 ///
@@ -22,7 +14,7 @@ pub async fn req(
     db: &State<Database>,
     user: User,
     bot: Reference,
-) -> Result<Json<StartPromptBotResponse>> {
+) -> Result<Json<serde_json::Value>> {
     if user.bot.is_some() {
         return Err(create_error!(IsBot));
     }
@@ -45,7 +37,7 @@ pub async fn req(
         .send()
         .await
         .map_err(|_| create_error!(InternalError))?
-        .json::<StartPromptBotResponse>()
+        .json::<serde_json::Value>()
         .await
         .map_err(|_| create_error!(InternalError))?;
     Ok(Json(response))
@@ -53,9 +45,7 @@ pub async fn req(
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        rocket, routes::bots::start_prompt_bot::StartPromptBotResponse, util::test::TestHarness,
-    };
+    use crate::{rocket, util::test::TestHarness};
     use revolt_database::{Bot, BotType, PartialBot};
     use revolt_models::v0;
     use rocket::http::{ContentType, Header, Status};
@@ -93,7 +83,7 @@ mod test {
             .await;
 
         assert_eq!(response.status(), Status::Ok);
-        let resp = response.into_json::<StartPromptBotResponse>().await;
+        let resp = response.into_json::<serde_json::Value>().await;
         info!("{:?}", resp);
     }
 }
