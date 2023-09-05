@@ -368,15 +368,15 @@ mod tests {
             components: Some(vec![
                 Component {
                     component_type: ComponentType::Button,
-                    label: "继续".into(),
-                    style: "color:green ".into(),
-                    enabled: false,
+                    label: Some("继续".into()),
+                    style: Some("color:green ".into()),
+                    enabled: Some(false),
                 },
                 Component {
                     component_type: ComponentType::Button,
-                    label: "重试".into(),
-                    style: "color:red ".into(),
-                    enabled: false,
+                    label: Some("重试".into()),
+                    style: Some("color:red ".into()),
+                    enabled: Some(false),
                 },
             ]),
             webhook: None,
