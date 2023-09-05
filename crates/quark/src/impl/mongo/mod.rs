@@ -183,31 +183,24 @@ impl MongoDb {
             }
         }
 
-        let query = if unset.is_empty() {
-            doc! {
-                "$set": if let Some(prefix) = &prefix {
-                    to_document(&prefix_keys(&partial, prefix))
-                } else {
-                    to_document(&partial)
-                }.map_err(|_| Error::DatabaseError {
-                    operation: "to_document",
-                    with: collection
-                })?
-            }
+        let set = if let Some(prefix) = &prefix {
+            to_document(&prefix_keys(&partial, prefix))
         } else {
-            doc! {
-                "$unset": unset,
-                "$set": if let Some(prefix) = &prefix {
-                    to_document(&prefix_keys(&partial, prefix))
-                } else {
-                    to_document(&partial)
-                }.map_err(|_| Error::DatabaseError {
-                    operation: "to_document",
-                    with: collection
-                })?
-            }
-        };
+            to_document(&partial)
+        }
+        .map_err(|_| Error::DatabaseError {
+            operation: "to_document",
+            with: collection,
+        })?;
 
+        let mut query = doc! {};
+        if !unset.is_empty() {
+            query.insert("$unset", unset);
+        }
+
+        if !set.is_empty() {
+            query.insert("$set", set);
+        }
         self.col::<Document>(collection)
             .update_one(projection, query, None)
             .await
