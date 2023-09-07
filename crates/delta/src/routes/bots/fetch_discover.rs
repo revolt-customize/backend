@@ -23,7 +23,6 @@ pub async fn fetch_discoverable_bots(db: &State<Database>) -> Result<Json<OwnedB
     bots.sort_by(|a, b| a.id.cmp(&b.id));
     users.sort_by(|a, b| a.id.cmp(&b.id));
 
-    // Ok(Json(OwnedBotsResponse { users, bots }))
     Ok(Json(OwnedBotsResponse {
         users: join_all(users.into_iter().map(|user| user.into_self())).await,
         bots: bots.into_iter().map(|bot| bot.into()).collect(),
