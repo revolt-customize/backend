@@ -125,7 +125,7 @@ async fn create_default_channel_for_bot(
     let server = Server {
         id: server_id.clone(),
         owner: user.id.clone(),
-        name: bot_name + "的社区",
+        name: bot_name + "的主页",
         description: None,
         channels: vec![channel_id],
         nsfw: false,
