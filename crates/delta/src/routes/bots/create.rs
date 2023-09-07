@@ -199,8 +199,11 @@ mod test {
 
         assert_eq!(response.status(), Status::Ok);
 
-        let bot: v0::Bot = response.into_json().await.expect("`Bot`");
-        assert!(harness.db.fetch_bot(&bot.id).await.is_ok());
+        let bot_response: v0::Bot = response.into_json().await.expect("`Bot`");
+        let bot = harness.db.fetch_bot(&bot_response.id).await.unwrap();
+
+        assert!(bot.server_invite.is_some());
+        assert!(bot.default_server.is_some());
     }
 
     #[test]
