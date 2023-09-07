@@ -138,7 +138,7 @@ fn resolve_bucket<'r>(request: &'r rocket::Request<'_>) -> (&'r str, Option<&'r 
 /// Resolve per-bucket limits
 fn resolve_bucket_limit(bucket: &str) -> u8 {
     match bucket {
-        "user_edit" => 2,
+        "user_edit" => 10,
         "users" => 20,
         "bots" => 10,
         "messaging" => 10,
