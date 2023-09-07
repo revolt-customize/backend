@@ -1,6 +1,6 @@
 use revolt_quark::{
     models::{Channel, User},
-    perms, Database, Error, Ref, Result, UserPermission,
+    Database, Ref, Result,
 };
 
 use rocket::{serde::json::Json, State};
@@ -33,23 +33,58 @@ pub async fn req(db: &State<Database>, user: User, target: Ref) -> Result<Json<C
 
     // Otherwise try to find or create a DM.
     if let Ok(channel) = db.find_direct_message_channel(&user.id, &target.id).await {
-        Ok(Json(channel))
-    } else if perms(&user)
-        .user(&target)
-        .calc_user(db)
-        .await
-        .get_send_message()
-    {
-        let new_channel = Channel::DirectMessage {
-            id: Ulid::new().to_string(),
-            active: false,
-            recipients: vec![user.id, target.id],
-            last_message_id: None,
-        };
+        return Ok(Json(channel));
+    }
 
-        new_channel.create(db).await?;
-        Ok(Json(new_channel))
-    } else {
-        Error::from_user_permission(UserPermission::SendMessage)
+    let new_channel = Channel::DirectMessage {
+        id: Ulid::new().to_string(),
+        active: false,
+        recipients: vec![user.id, target.id],
+        last_message_id: None,
+    };
+
+    new_channel.create(db).await?;
+    Ok(Json(new_channel))
+}
+
+#[cfg(test)]
+mod tests {
+    use revolt_database::Bot;
+    use revolt_quark::models::Channel;
+    use rocket::http::{Header, Status};
+
+    use crate::util::test::TestHarness;
+
+    #[rocket::async_test]
+    async fn remove_backgroud_profile() {
+        let harness = TestHarness::new().await;
+        let (_, session, from) = harness.new_user().await;
+
+        let (_, _, user) = harness.new_user().await;
+        let bot_name = TestHarness::rand_string();
+        let bot = Bot::create(&harness.db, bot_name.clone(), &user, None)
+            .await
+            .expect("`Bot`");
+
+        let response = harness
+            .client
+            .get(format!("/users/{}/dm", bot.id))
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .dispatch()
+            .await;
+
+        // println!("{:?}", response.into_string().await);
+        assert_eq!(response.status(), Status::Ok);
+
+        let channel = response.into_json::<Channel>().await.unwrap();
+        match channel {
+            Channel::DirectMessage {
+                active, recipients, ..
+            } => {
+                assert!(!active);
+                assert_eq!(recipients, vec![from.id, bot.id])
+            }
+            _ => unreachable!(),
+        }
     }
 }
