@@ -32,7 +32,7 @@ pub struct Error {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
-#[derive(Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ErrorType {
     /// This error was not labeled :(
     LabelMe,
@@ -94,6 +94,7 @@ pub enum ErrorType {
     ReachedMaximumBots,
     IsBot,
     BotIsPrivate,
+    DuplicatePublicBotName,
 
     // ? User safety related errors
     CannotReportYourself,
