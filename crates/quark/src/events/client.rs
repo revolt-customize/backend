@@ -1,5 +1,5 @@
 use authifier::AuthifierEvent;
-use revolt_models::v0::{FieldsWebhook, PartialWebhook, Webhook};
+use revolt_models::v0::{self, FieldsWebhook, PartialWebhook, Webhook};
 use serde::{Deserialize, Serialize};
 
 use crate::models::channel::{FieldsChannel, PartialChannel};
@@ -64,7 +64,7 @@ pub enum EventV1 {
     Message(Message),
 
     /// Interaction Event
-    // Interaction(Interaction),
+    Interaction(v0::Interaction),
 
     /// Message Patch Event
     MessagePatch {

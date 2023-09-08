@@ -299,7 +299,7 @@ pub struct DataMessageSend {
 
 #[cfg(test)]
 mod tests {
-    use revolt_models::v0::{Component, Interaction};
+    use revolt_models::v0::{self, Component};
     use serde_json::json;
 
     use crate::{
@@ -368,14 +368,13 @@ mod tests {
 
         println!("{data} ");
 
-        let interaction_event =
-            revolt_database::events::client::EventV1::Interaction(Interaction {
-                message_id: "id".into(),
-                nonce: "nonce".into(),
-                channel_id: "channer".into(),
-                author_id: "user_id".into(),
-                content: "content".into(),
-            });
+        let interaction_event = EventV1::Interaction(v0::Interaction {
+            message_id: "id".into(),
+            nonce: "nonce".into(),
+            channel_id: "channer".into(),
+            author_id: "user_id".into(),
+            content: "content".into(),
+        });
 
         let data =
             serde_json::to_string(&interaction_event).expect("Failed to serialise (as json).");
