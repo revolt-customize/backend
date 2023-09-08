@@ -35,3 +35,21 @@ impl From<PromptTemplate> for crate::PromptTemplate {
         }
     }
 }
+
+impl From<Component> for crate::Component {
+    fn from(value: Component) -> Self {
+        match value {
+            Component::Button {
+                label,
+                style,
+                enabled,
+            } => crate::Component::Button {
+                label,
+                style,
+                enabled,
+            },
+            Component::LineBreak => crate::Component::LineBreak,
+            Component::Status { label } => crate::Component::Status { label },
+        }
+    }
+}

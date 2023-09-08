@@ -3695,6 +3695,7 @@ dependencies = [
  "redis-kiss",
  "regex",
  "reqwest",
+ "revolt-config",
  "revolt-database",
  "revolt-models",
  "revolt-permissions",

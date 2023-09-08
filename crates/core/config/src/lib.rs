@@ -13,8 +13,8 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
             FileFormat::Toml,
         ));
 
-        if std::path::Path::new("revolt.toml").exists() {
-            builder = builder.add_source(File::new("revolt.toml", FileFormat::Toml));
+        if std::path::Path::new("Revolt.toml").exists() {
+            builder = builder.add_source(File::new("Revolt.toml", FileFormat::Toml));
         }
 
         builder.build().unwrap()
@@ -97,9 +97,11 @@ pub struct Api {
 pub struct FeaturesLimits {
     pub group_size: usize,
     pub bots: usize,
+    pub message_length: usize,
     pub message_replies: usize,
     pub message_attachments: usize,
     pub message_embeds: usize,
+    pub message_reactions: usize,
     pub servers: usize,
     pub server_emoji: usize,
     pub server_roles: usize,

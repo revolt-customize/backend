@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 use revolt_database::{Channel, Database, User};
@@ -58,35 +60,33 @@ async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
         return Ok(());
     }
 
-    let id = Ulid::new().to_string();
-    let users = vec![user_id.clone()];
+    let mut users = HashSet::new();
+    users.insert(user_id.clone());
 
-    let mut group = Channel::Group {
-        id,
-        name: String::from("多模型群聊"),
-        owner: user_id.clone(),
-        description: Some(String::from("默认群聊，可以通过@来调用大模型")),
-        recipients: users,
-        icon: None,
-        last_message_id: None,
-        permissions: None,
-        nsfw: false,
-    };
-
-    group.create(db).await?;
-
-    for bot in db.fetch_users(OFFICIAL_MODEL_BOTS.as_slice()).await? {
-        group.add_user_to_group(db, &bot, &user_id).await?;
-
+    for id in OFFICIAL_MODEL_BOTS.as_slice() {
+        users.insert(id.clone());
         Channel::DirectMessage {
             id: Ulid::new().to_string(),
             active: true,
-            recipients: vec![bot.id, user_id.clone()],
+            recipients: vec![id.clone(), user_id.clone()],
             last_message_id: None,
         }
         .create(db)
         .await?;
     }
+
+    let _ = Channel::create_group(
+        db,
+        v0::DataCreateGroup {
+            name: "多模型群聊".into(),
+            description: Some("默认群聊，可以通过@来调用大模型".into()),
+            icon: None,
+            users,
+            nsfw: None,
+        },
+        user_id.clone(),
+    )
+    .await?;
 
     Ok(())
 }
