@@ -1,7 +1,6 @@
 use crate::{
-    ChannelPermission, ChannelType, PermissionQuery, PermissionValue, RelationshipStatus,
-    UserPermission, ALLOW_IN_TIMEOUT, DEFAULT_PERMISSION_DIRECT_MESSAGE,
-    DEFAULT_PERMISSION_SAVED_MESSAGES, DEFAULT_PERMISSION_VIEW_ONLY,
+    ChannelPermission, PermissionQuery, PermissionValue, RelationshipStatus, UserPermission,
+    ALLOW_IN_TIMEOUT,
 };
 
 /// Calculate permissions against a user
