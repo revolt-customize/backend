@@ -97,4 +97,4 @@ sentry = "0.31.5"
 revolt-result = { path = "../core/result", features = ["serde", "schemas"] }
 revolt-presence = { path = "../core/presence", features = ["redis-is-patched"] }
 revolt-database = { path = "../core/database" }
-revolt-models = { path = "../core/models" }
+revolt-models = { path = "../core/models", features = ["validator"] }

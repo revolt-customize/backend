@@ -1,8 +1,6 @@
-use revolt_quark::{
-    events::client::EventV1,
-    models::{message::Interaction, User},
-    perms, Db, Error, Permission, Ref, Result,
-};
+use revolt_database::events::client::EventV1;
+use revolt_models::v0;
+use revolt_quark::{models::User, perms, Db, Error, Permission, Ref, Result};
 
 use rocket::serde::json::Json;
 use serde::{Deserialize, Serialize};
@@ -27,7 +25,7 @@ pub async fn req(
     target: Ref,
     msg: Ref,
     interaction: Json<DataInteraction>,
-) -> Result<Json<Interaction>> {
+) -> Result<Json<v0::Interaction>> {
     let interaction = interaction.into_inner();
     interaction
         .validate()
@@ -43,7 +41,7 @@ pub async fn req(
 
     let message = msg.as_message(db).await?;
 
-    let interaction_message = Interaction {
+    let interaction_message = v0::Interaction {
         message_id: message.id.clone(),
         nonce: message.nonce.unwrap_or("".into()),
         channel_id: channel.id().to_string(),
