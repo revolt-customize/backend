@@ -29,29 +29,30 @@ pub async fn edit_bot(
         return Err(create_error!(NotFound));
     }
 
-    if let Some(name) = data.name {
-        if data.public.unwrap_or(false) || bot.public {
-            let bots = db.fetch_discoverable_bots().await?;
-            let mut user_ids = bots
-                .into_iter()
-                .map(|x| x.id.clone())
-                .collect::<Vec<String>>();
-
-            user_ids.push(bot.id.clone());
-            let users = db.fetch_users(&user_ids).await?;
-            let bot_user = users
-                .iter()
-                .find(|x| *x.id == bot.id)
-                .ok_or_else(|| create_error!(NotFound))?;
-
-            if users
-                .iter()
-                .any(|x| *x.id != bot_user.id && *x.username == name)
-            {
-                return Err(create_error!(DuplicatePublicBotName));
-            }
+    // public bot or to be a public bot
+    if bot.public || data.public.unwrap_or(false) {
+        let bot_user = db.fetch_user(&bot.id).await?;
+        let mut bot_name = bot_user.username.clone();
+        if let Some(ref name) = data.name {
+            bot_name = name.clone();
         }
 
+        let public_bots = db.fetch_discoverable_bots().await?;
+        let user_ids = public_bots
+            .into_iter()
+            .map(|x| x.id.clone())
+            .collect::<Vec<String>>();
+
+        let users = db.fetch_users(&user_ids).await?;
+        if users
+            .iter()
+            .any(|x| *x.id != bot_user.id && *x.username == bot_name)
+        {
+            return Err(create_error!(DuplicatePublicBotName));
+        }
+    }
+
+    if let Some(name) = data.name {
         let mut user = db.fetch_user(&bot.id).await?;
         user.update_username(db, name).await?;
     }
@@ -283,5 +284,56 @@ mod test {
             .await;
 
         assert_eq!(response.status(), Status::Ok);
+    }
+
+    #[rocket::async_test]
+    async fn private_bot_with_duplicate_name_set_public() {
+        let harness = TestHarness::new().await;
+        let (_, session, user) = harness.new_user().await;
+
+        let bot_name = TestHarness::rand_string();
+        let bot1 = Bot::create(
+            &harness.db,
+            bot_name.clone(),
+            &user,
+            PartialBot {
+                public: Some(false),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("`Bot`");
+
+        let _ = Bot::create(
+            &harness.db,
+            bot_name.clone(),
+            &user,
+            PartialBot {
+                public: Some(true),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("`Bot`");
+
+        let response = harness
+            .client
+            .patch(format!("/bots/{}", bot1.id))
+            .header(ContentType::JSON)
+            .body(
+                json!(v0::DataEditBot {
+                    public: Some(true),
+                    ..Default::default()
+                })
+                .to_string(),
+            )
+            .header(Header::new("x-session-token", session.token.to_string()))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Forbidden);
+
+        let err = response.into_json::<Error>().await.unwrap();
+        assert_eq!(err.error_type, ErrorType::DuplicatePublicBotName);
     }
 }
