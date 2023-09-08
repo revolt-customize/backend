@@ -438,4 +438,8 @@ impl User {
         )
         .await
     }
+
+    pub async fn from_token(db: &Database, token: &str) -> Result<User> {
+        db.fetch_user(&db.fetch_bot_by_token(token).await?.id).await
+    }
 }

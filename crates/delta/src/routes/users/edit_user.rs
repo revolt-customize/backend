@@ -205,7 +205,7 @@ mod tests {
     #[rocket::async_test]
     async fn edit_user_bot() {
         let harness = TestHarness::new().await;
-        let (_, session, mut user) = harness.new_user().await;
+        let (_, _session, mut user) = harness.new_user().await;
 
         user.bot = Some(
             v0::BotInformation {
@@ -237,7 +237,7 @@ mod tests {
             .client
             .patch(format!("/users/{}", bot.id.clone()))
             .header(Header::new("x-bot-token", bot.token.clone()))
-            .header(Header::new("x-session-token", session.token.to_string()))
+            // .header(Header::new("x-session-token", session.token.to_string()))
             .header(ContentType::JSON)
             .body(
                 json!(DataEditUser {
