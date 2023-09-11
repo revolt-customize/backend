@@ -29,7 +29,7 @@ pub async fn req(
     }
 
     let host = BOT_SERVER_PUBLIC_URL.to_string();
-    let url = format!("{host}/api/rest/v1/bot/startUp");
+    let url = format!("{host}/api/rest/v1/bot/restart");
     let client = reqwest::Client::new();
     let response = client
         .get(url.clone())
