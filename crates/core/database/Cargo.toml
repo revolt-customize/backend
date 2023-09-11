@@ -25,7 +25,7 @@ default = ["mongodb", "async-std-runtime", "tasks"]
 # Core
 revolt-config = { version = "0.6.8", path = "../config" }
 revolt-result = { version = "0.6.8", path = "../result" }
-revolt-models = { version = "0.6.8", path = "../models" }
+revolt-models = { version = "0.6.8", path = "../models", features = ["validator"] }
 revolt-presence = { version = "0.6.8", path = "../presence" }
 revolt-permissions = { version = "0.6.8", path = "../permissions", features = [
     "serde",

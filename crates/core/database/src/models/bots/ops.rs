@@ -13,6 +13,9 @@ pub trait AbstractBots: Sync + Send {
     /// Fetch a bot by its id
     async fn fetch_bot(&self, id: &str) -> Result<Bot>;
 
+    /// Fetch multiple bots by their ids
+    async fn fetch_bots<'a>(&self, ids: &'a [String]) -> Result<Vec<Bot>>;
+
     /// Fetch a bot by its token
     async fn fetch_bot_by_token(&self, token: &str) -> Result<Bot>;
 

@@ -2,6 +2,7 @@ use revolt_result::Result;
 
 use crate::{Bot, FieldsBot, PartialBot};
 use crate::{IntoDocumentPath, MongoDb};
+use futures::StreamExt;
 
 use super::AbstractBots;
 
@@ -101,6 +102,31 @@ impl AbstractBots for MongoDb {
                 "bot_type": bot_type
             }
         )
+    }
+
+    /// Fetch multiple bots by their ids
+    async fn fetch_bots<'a>(&self, ids: &'a [String]) -> Result<Vec<Bot>> {
+        Ok(self
+            .col::<Bot>(COL)
+            .find(
+                doc! {
+                    "_id": {
+                        "$in": ids
+                    }
+                },
+                None,
+            )
+            .await
+            .map_err(|_| create_database_error!("find", COL))?
+            .filter_map(|s| async {
+                if cfg!(debug_assertions) {
+                    Some(s.unwrap())
+                } else {
+                    s.ok()
+                }
+            })
+            .collect()
+            .await)
     }
 }
 

@@ -98,4 +98,12 @@ impl AbstractBots for ReferenceDb {
             .cloned()
             .collect())
     }
+
+    /// Fetch multiple bots by their ids
+    async fn fetch_bots<'a>(&self, ids: &'a [String]) -> Result<Vec<Bot>> {
+        let bots = self.bots.lock().await;
+        ids.iter()
+            .map(|id| bots.get(id).cloned().ok_or_else(|| create_error!(NotFound)))
+            .collect()
+    }
 }
