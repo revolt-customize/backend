@@ -61,8 +61,6 @@ pub async fn message_send(
         interactions.validate(db, &permissions).await?;
     }
 
-    let is_stream = data.is_stream;
-
     // Create the message
     let author: v0::User = user.clone().into(Some(&user)).await;
     Ok(Json(
@@ -73,7 +71,6 @@ pub async fn message_send(
             v0::MessageAuthor::User(&author),
             idempotency,
             true,
-            is_stream,
         )
         .await?
         .into(),

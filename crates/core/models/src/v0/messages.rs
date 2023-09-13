@@ -34,9 +34,6 @@ auto_derived_partial!(
         /// Message content
         #[serde(skip_serializing_if = "Option::is_none")]
         pub content: Option<String>,
-        /// Message Components
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub components: Option<Vec<Component>>,
         /// System message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub system: Option<SystemMessage>,
@@ -64,6 +61,16 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+
+        /// Message Components
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub components: Option<Vec<Component>>,
+
+        /// Session ID of the message which created by bot's developer
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub session_id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub is_stream: Option<bool>,
     },
     "PartialMessage"
 );

@@ -64,12 +64,15 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+
         /// Whether the message is streaming message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub is_stream: Option<bool>,
         /// Message Components
         #[serde(skip_serializing_if = "Option::is_none")]
         pub components: Option<Vec<Component>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub session_id: Option<String>,
     },
     "PartialMessage"
 );
@@ -228,6 +231,7 @@ impl Default for Message {
             masquerade: None,
             components: Default::default(),
             is_stream: None,
+            session_id: None,
         }
     }
 }
@@ -242,7 +246,6 @@ impl Message {
         author: MessageAuthor<'_>,
         mut idempotency: IdempotencyKey,
         generate_embeds: bool,
-        is_stream: Option<bool>,
     ) -> Result<Message> {
         let config = config().await;
 
@@ -290,7 +293,8 @@ impl Message {
         let message_id = Ulid::new().to_string();
         let mut message = Message {
             id: message_id.clone(),
-            is_stream,
+            is_stream: data.is_stream,
+            session_id: data.session_id,
             components: data
                 .components
                 .map(|components| components.into_iter().map(|x| x.into()).collect()),

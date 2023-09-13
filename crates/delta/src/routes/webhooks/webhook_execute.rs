@@ -60,7 +60,6 @@ pub async fn webhook_execute(
             v0::MessageAuthor::Webhook(&webhook.into()),
             idempotency,
             true,
-            Some(false),
         )
         .await?
         .into(),

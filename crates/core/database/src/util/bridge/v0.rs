@@ -369,6 +369,8 @@ impl From<crate::Message> for Message {
             components: value
                 .components
                 .map(|component| component.into_iter().map(|x| x.into()).collect()),
+            session_id: value.session_id,
+            is_stream: value.is_stream,
         }
     }
 }
@@ -401,6 +403,8 @@ impl From<crate::PartialMessage> for PartialMessage {
             components: value
                 .components
                 .map(|component| component.into_iter().map(|x| x.into()).collect()),
+            session_id: value.session_id,
+            is_stream: value.is_stream,
         }
     }
 }
