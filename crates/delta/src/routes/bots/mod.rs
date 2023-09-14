@@ -2,6 +2,7 @@ use revolt_rocket_okapi::revolt_okapi::openapi3::OpenApi;
 use rocket::Route;
 
 mod create;
+mod debug_bot;
 mod delete;
 mod edit;
 mod fetch;
@@ -24,5 +25,6 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         fetch_discover::fetch_discoverable_bots,
         search_bots::req,
         start_prompt_bot::req,
+        debug_bot::req,
     ]
 }
