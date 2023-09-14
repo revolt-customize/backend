@@ -24,6 +24,6 @@ pub struct Message {
 /// Debug API for prompt bots
 #[openapi(tag = "Bots")]
 #[post("/debug-chat", data = "<data>")]
-pub async fn req(_data: Json<RequestBody>) -> Result<EmptyResponse> {
+pub async fn req(data: Json<RequestBody>) -> Result<EmptyResponse> {
     Ok(EmptyResponse)
 }
