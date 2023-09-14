@@ -42,66 +42,71 @@ impl<'r> FromRequest<'r> for User {
 
         if let Some(user) = user {
             return Outcome::Success(user.clone());
+        } else {
+            return Outcome::Failure((Status::Unauthorized, authifier::Error::InvalidSession));
         }
 
         // run uuap check
-        let uuap_response: &Option<v0::UUAPResponse> = request
-            .local_cache_async(async {
-                let mut cookie_str = String::new();
-                for cookie in request.cookies().iter() {
-                    cookie_str.push_str(&format!("{}={}; ", cookie.name(), cookie.value()));
-                }
+        // let uuap_response: &Option<v0::UUAPResponse> = request
+        //     .local_cache_async(async {
+        //         let mut cookie_str = String::new();
+        //         for cookie in request.cookies().iter() {
+        //             cookie_str.push_str(&format!("{}={}; ", cookie.name(), cookie.value()));
+        //         }
 
-                let config = revolt_config::config().await;
+        //         let config = revolt_config::config().await;
 
-                let service_url = request.headers().get("refer").next().unwrap_or("");
-                let url = format!(
-                    "{}/v1/login?service={}",
-                    config.api.botservice.chatall_server, service_url
-                );
+        //         let service_url = request.headers().get("refer").next().unwrap_or("");
+        //         let url = format!(
+        //             "{}/v1/login?service={}",
+        //             config.api.botservice.chatall_server, service_url
+        //         );
 
-                let client = reqwest::Client::new();
-                let response: v0::UUAPResponse = client
-                    .get(url.clone())
-                    .header(COOKIE, cookie_str)
-                    .send()
-                    .await
-                    .expect("SendRequestFailed")
-                    .json()
-                    .await
-                    .expect("ParseJsonFailed");
+        //         let client = reqwest::Client::new();
+        //         let response: v0::UUAPResponse = client
+        //             .get(url.clone())
+        //             .header(COOKIE, cookie_str)
+        //             .send()
+        //             .await
+        //             .expect("SendRequestFailed")
+        //             .json()
+        //             .await
+        //             .expect("ParseJsonFailed");
 
-                Some(response)
-            })
-            .await;
+        //         Some(response)
+        //     })
+        //     .await;
 
-        match &uuap_response.as_ref().unwrap().data {
-            v0::UUAPResponseData::Forbidden { .. } => {
-                return Outcome::Failure((Status::Forbidden, authifier::Error::InvalidInvite));
-            }
-            v0::UUAPResponseData::Redirect(..) => {
-                return Outcome::Failure((Status::Unauthorized, authifier::Error::InvalidSession));
-            }
+        // match &uuap_response.as_ref().unwrap().data {
+        //     v0::UUAPResponseData::Forbidden { .. } => {
+        //         return Outcome::Failure((Status::Forbidden, authifier::Error::InvalidInvite));
+        //     }
+        //     v0::UUAPResponseData::Redirect(..) => {
+        //         return Outcome::Failure((Status::Unauthorized, authifier::Error::InvalidSession));
+        //     }
 
-            v0::UUAPResponseData::Success { username, .. } => {
-                let authifier = request.rocket().state::<Authifier>().expect("`Authifier`");
-                let db = request.rocket().state::<Database>().expect("`Database`");
-                let email = format!("{}@baidu.com", username);
-                let user =
-                    User::get_or_create_new_user(authifier, db, username.clone(), email.clone())
-                        .await;
+        //     v0::UUAPResponseData::Success { user, .. } => {
+        //         let authifier = request.rocket().state::<Authifier>().expect("`Authifier`");
+        //         let db = request.rocket().state::<Database>().expect("`Database`");
+        //         let user = User::get_or_create_new_user(
+        //             authifier,
+        //             db,
+        //             user.username.clone(),
+        //             user.email.clone(),
+        //         )
+        //         .await;
 
-                match user {
-                    Ok(u) => return Outcome::Success(u),
-                    Err(_) => {
-                        return Outcome::Failure((
-                            Status::InternalServerError,
-                            authifier::Error::InvalidSession,
-                        ))
-                    }
-                }
-            }
-        }
+        //         match user {
+        //             Ok((_, u)) => return Outcome::Success(u),
+        //             Err(_) => {
+        //                 return Outcome::Failure((
+        //                     Status::InternalServerError,
+        //                     authifier::Error::InvalidSession,
+        //                 ))
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 
@@ -111,7 +116,7 @@ impl User {
         db: &Database,
         username: String,
         email: String,
-    ) -> Result<User, Error> {
+    ) -> Result<(Account, User), Error> {
         // fetch account by email
         if let Some(account) = authifier
             .database
@@ -128,18 +133,18 @@ impl User {
                             .await
                             .expect("`User`");
 
-                        return Ok(user);
+                        return Ok((account, user));
                     }
 
                     Err(create_error!(InternalError))
                 }
 
-                Ok(u) => Ok(u),
+                Ok(u) => Ok((account, u)),
             }
         } else {
             // account not exist, create a new account and user
-            let (_, _, user) = new_user(authifier, db, username.clone(), email.clone()).await;
-            Ok(user)
+            let (account, user) = new_user(authifier, db, username.clone(), email.clone()).await;
+            Ok((account, user))
         }
     }
 }
@@ -150,16 +155,10 @@ async fn new_user(
     db: &Database,
     username: String,
     email: String,
-) -> (Account, Session, User) {
+) -> (Account, User) {
     let account = Account::new(authifier, email.clone(), email.clone(), false)
         .await
         .expect("`Account`");
-
-    let session = account
-        .create_session(authifier, String::new())
-        .await
-        .expect("`Session`");
-
     let user = User::create(db, username, account.id.to_string(), None)
         .await
         .expect("`User`");
@@ -168,5 +167,5 @@ async fn new_user(
         .await
         .expect("PrepareOnBoardData");
 
-    (account, session, user)
+    (account, user)
 }

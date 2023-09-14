@@ -49,71 +49,73 @@ impl<'r> FromRequest<'r> for User {
 
         if let Some(user) = user {
             return Outcome::Success(old_db.fetch_user(&user.id).await.unwrap());
+        } else {
+            return Outcome::Failure((Status::Unauthorized, authifier::Error::InvalidSession));
         }
 
         // run uuap check
-        let uuap_response: &Option<v0::UUAPResponse> = request
-            .local_cache_async(async {
-                let mut cookie_str = String::new();
-                for cookie in request.cookies().iter() {
-                    cookie_str.push_str(&format!("{}={}; ", cookie.name(), cookie.value()));
-                }
+        // let uuap_response: &Option<v0::UUAPResponse> = request
+        //     .local_cache_async(async {
+        //         let mut cookie_str = String::new();
+        //         for cookie in request.cookies().iter() {
+        //             cookie_str.push_str(&format!("{}={}; ", cookie.name(), cookie.value()));
+        //         }
 
-                let config = revolt_config::config().await;
-                let service_url = request.headers().get("refer").next().unwrap_or("");
-                let url = format!(
-                    "{}/v1/login?service={}",
-                    config.api.botservice.chatall_server, service_url
-                );
+        //         let config = revolt_config::config().await;
+        //         let service_url = request.headers().get("refer").next().unwrap_or("");
+        //         let url = format!(
+        //             "{}/v1/login?service={}",
+        //             config.api.botservice.chatall_server, service_url
+        //         );
 
-                let client = reqwest::Client::new();
-                let response: v0::UUAPResponse = client
-                    .get(url.clone())
-                    .header(COOKIE, cookie_str)
-                    .send()
-                    .await
-                    .expect("SendRequestFailed")
-                    .json()
-                    .await
-                    .expect("ParseJsonFailed");
-                Some(response)
-            })
-            .await;
+        //         let client = reqwest::Client::new();
+        //         let response: v0::UUAPResponse = client
+        //             .get(url.clone())
+        //             .header(COOKIE, cookie_str)
+        //             .send()
+        //             .await
+        //             .expect("SendRequestFailed")
+        //             .json()
+        //             .await
+        //             .expect("ParseJsonFailed");
+        //         Some(response)
+        //     })
+        //     .await;
 
-        match &uuap_response.as_ref().unwrap().data {
-            v0::UUAPResponseData::Forbidden { .. } => {
-                return Outcome::Failure((Status::Forbidden, authifier::Error::InvalidInvite));
-            }
-            v0::UUAPResponseData::Redirect(..) => {
-                return Outcome::Failure((Status::Unauthorized, authifier::Error::InvalidSession));
-            }
+        // match &uuap_response.as_ref().unwrap().data {
+        //     v0::UUAPResponseData::Forbidden { .. } => {
+        //         return Outcome::Failure((Status::Forbidden, authifier::Error::InvalidInvite));
+        //     }
+        //     v0::UUAPResponseData::Redirect(..) => {
+        //         return Outcome::Failure((Status::Unauthorized, authifier::Error::InvalidSession));
+        //     }
 
-            v0::UUAPResponseData::Success { username, .. } => {
-                let authifier = request.rocket().state::<Authifier>().expect("`Authifier`");
-                let db = request
-                    .rocket()
-                    .state::<revolt_database::Database>()
-                    .expect("`Database`");
-                let email = format!("{}@baidu.com", username);
-                let user = revolt_database::User::get_or_create_new_user(
-                    authifier,
-                    db,
-                    username.clone(),
-                    email.clone(),
-                )
-                .await;
+        //     v0::UUAPResponseData::Success { username, .. } => {
+        //         let authifier = request.rocket().state::<Authifier>().expect("`Authifier`");
+        //         let db = request
+        //             .rocket()
+        //             .state::<revolt_database::Database>()
+        //             .expect("`Database`");
+        //         let email = format!("{}@baidu.com", username);
+        //         let user = revolt_database::User::get_or_create_new_user(
+        //             authifier,
+        //             db,
+        //             username.clone(),
+        //             email.clone(),
+        //         )
+        //         .await;
 
-                match user {
-                    Ok(u) => return Outcome::Success(old_db.fetch_user(&u.id).await.unwrap()),
-                    Err(_) => {
-                        return Outcome::Failure((
-                            Status::InternalServerError,
-                            authifier::Error::InvalidSession,
-                        ))
-                    }
-                }
-            }
-        }
+        //         match user {
+        //             Ok((_, u)) => return Outcome::Success(old_db.fetch_user(&u.id).await.unwrap()),
+        //             Err(_) => {
+        //                 return Outcome::Failure((
+        //                     Status::InternalServerError,
+        //                     authifier::Error::InvalidSession,
+        //                 ))
+        //             }
+        //         }
+        //     }
+        // }
     }
 
     // async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {

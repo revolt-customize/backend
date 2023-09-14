@@ -7,7 +7,6 @@ auto_derived!(
         pub msg: String,
         pub data: UUAPResponseData,
     }
-
     #[serde(untagged)]
     pub enum UUAPResponseData {
         Redirect(String),
@@ -22,6 +21,8 @@ auto_derived!(
     }
 
     pub struct UUAPUserInfo {
+        pub name: String,
+        pub email: String,
         pub username: String,
         pub department_name: String,
         pub work_team: String,
@@ -62,6 +63,8 @@ mod tests {
                 },
                 "user": {
                     "username": "zhangshiju01",
+                    "name": "张士菊",
+                    "email": "zhangshiju01@baidu.com",
                     "department_name": "企业云平台服务部",
                     "work_team": "混合云平台组"
                 }
