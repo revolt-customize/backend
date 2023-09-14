@@ -1,15 +1,12 @@
-use std::collections::HashSet;
-
 use once_cell::sync::Lazy;
 use regex::Regex;
-use revolt_database::{Channel, Database, User};
+use revolt_database::{Database, User};
 use revolt_models::v0;
-use revolt_quark::{authifier::models::Session, variables::delta::OFFICIAL_MODEL_BOTS};
+use revolt_quark::authifier::models::Session;
 use revolt_result::{create_error, Result};
 
 use rocket::{serde::json::Json, State};
 use serde::{Deserialize, Serialize};
-use ulid::Ulid;
 use validator::Validate;
 
 /// Regex for valid usernames
@@ -49,46 +46,9 @@ pub async fn req(
     })?;
     let new_user = User::create(db, data.username, session.user_id, None).await?;
 
-    prepare_on_board_data(db, new_user.id.clone()).await?;
+    User::prepare_on_board_data(db, new_user.id.clone()).await?;
 
     Ok(Json(new_user.into_self().await))
-}
-
-/// prepare on board data for the first time login
-async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
-    if (*OFFICIAL_MODEL_BOTS).is_empty() {
-        return Ok(());
-    }
-
-    let mut users = HashSet::new();
-    users.insert(user_id.clone());
-
-    for id in OFFICIAL_MODEL_BOTS.as_slice() {
-        users.insert(id.clone());
-        Channel::DirectMessage {
-            id: Ulid::new().to_string(),
-            active: true,
-            recipients: vec![id.clone(), user_id.clone()],
-            last_message_id: None,
-        }
-        .create(db)
-        .await?;
-    }
-
-    let _ = Channel::create_group(
-        db,
-        v0::DataCreateGroup {
-            name: "多模型群聊".into(),
-            description: Some("默认群聊，可以通过@来调用大模型".into()),
-            icon: None,
-            users,
-            nsfw: None,
-        },
-        user_id.clone(),
-    )
-    .await?;
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -98,13 +58,14 @@ mod tests {
     use crate::{rocket, routes::onboard::complete::DataOnboard, util::test::TestHarness};
     use revolt_database::Channel;
     use revolt_models::v0;
-    use revolt_quark::variables::delta::OFFICIAL_MODEL_BOTS;
     use rocket::http::{ContentType, Header, Status};
 
     #[rocket::async_test]
     async fn test_on_board_compelete() {
         let harness = TestHarness::new().await;
         let (_, session) = harness.new_account_session().await;
+
+        let config = revolt_config::config().await;
 
         let response = harness
             .client
@@ -121,7 +82,7 @@ mod tests {
             .await;
         let status = response.status();
         // println!("{:}", response.into_string().await.unwrap());
-        assert_eq!(status, Status::Ok);
+        assert_eq!(status, Status::Found);
 
         let user = response.into_json::<v0::User>().await.unwrap();
         let channels = harness.db.find_direct_messages(&user.id).await.unwrap();
@@ -139,7 +100,7 @@ mod tests {
                     let set: HashSet<String> = recipients.into_iter().collect();
                     let mut expect = HashSet::new();
                     expect.insert(user.id.clone());
-                    for id in OFFICIAL_MODEL_BOTS.as_slice() {
+                    for id in config.api.botservice.official_model_bots.as_slice() {
                         expect.insert(id.clone());
                     }
                     assert_eq!(set, expect);

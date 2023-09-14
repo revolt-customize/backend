@@ -44,6 +44,7 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::InvalidRole => Status::NotFound,
             ErrorType::Banned => Status::Forbidden,
             ErrorType::AlreadyInServer => Status::Conflict,
+            ErrorType::ServerHasDefaultBotAlive => Status::Forbidden,
 
             ErrorType::TooManyServers { .. } => Status::BadRequest,
             ErrorType::TooManyEmbeds { .. } => Status::BadRequest,
@@ -76,6 +77,10 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::NotFound => Status::NotFound,
             ErrorType::NoEffect => Status::Ok,
             ErrorType::FailedValidation { .. } => Status::BadRequest,
+
+            // handled in auth_checker
+            ErrorType::LoginRedirect { .. } => unreachable!(),
+            ErrorType::ForbiddenUser { .. } => unreachable!(),
         };
 
         // Serialize the error data structure into JSON.

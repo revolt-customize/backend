@@ -97,6 +97,7 @@ pub async fn web() -> Rocket<Build> {
         .manage(cors.clone())
         .attach(util::ratelimiter::RatelimitFairing)
         .attach(cors)
+        .attach(util::auth_checker::UserAuthFairing)
         .configure(rocket::Config {
             limits: rocket::data::Limits::default().limit("string", 5.megabytes()),
             address: Ipv4Addr::new(0, 0, 0, 0).into(),

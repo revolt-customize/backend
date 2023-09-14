@@ -41,6 +41,12 @@ hcaptcha_sitekey = ""
 [api.workers]
 max_concurrent_connections = 50
 
+[api.botservice]
+bot_server = ""
+chatall_server = ""
+official_custom_bots = []
+official_model_bots = []
+
 [features]
 
 [features.limits]

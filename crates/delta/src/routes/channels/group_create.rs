@@ -1,7 +1,6 @@
 use revolt_config::config;
 use revolt_database::{Channel, Database, RelationshipStatus, User};
 use revolt_models::v0;
-use revolt_quark::variables::delta::OFFICIAL_MODEL_BOTS;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
@@ -45,9 +44,9 @@ pub async fn create_group(
             }
         }
     }
-
-    if !(*OFFICIAL_MODEL_BOTS).is_empty() {
-        data.users.extend(OFFICIAL_MODEL_BOTS.iter().cloned());
+    if !config.api.botservice.official_model_bots.is_empty() {
+        data.users
+            .extend(config.api.botservice.official_model_bots.iter().cloned());
     }
 
     Ok(Json(Channel::create_group(db, data, user.id).await?.into()))
