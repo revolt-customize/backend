@@ -54,7 +54,8 @@ impl DatabaseInfo {
             }
             DatabaseInfo::Test(database_name) => {
                 match std::env::var("TEST_DB")
-                    .expect("`TEST_DB` environment variable should be set to REFERENCE or MONGODB")
+                    .unwrap_or("MONGODB".into())
+                    // .expect("`TEST_DB` environment variable should be set to REFERENCE or MONGODB")
                     .as_str()
                 {
                     "REFERENCE" => DatabaseInfo::Reference.connect().await?,
