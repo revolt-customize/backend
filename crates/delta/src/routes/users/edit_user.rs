@@ -212,6 +212,7 @@ mod tests {
                 owner_id: user.id.clone(),
                 model: Some(v0::BotModel {
                     model_name: "gpt".into(),
+                    welcome: "".into(),
                     prompts: v0::PromptTemplate {
                         system_prompt: "you are a developer".into(),
                     },
@@ -251,6 +252,7 @@ mod tests {
                         owner: "new_owner_id".into(),
                         model: Some(BotModel {
                             model_name: "bot-edited".into(),
+                            welcome: "".into(),
                             prompts: PromptTemplate {
                                 system_prompt: "new prompt".into()
                             },
@@ -279,6 +281,7 @@ mod tests {
                 owner_id: bot.owner.clone(),
                 model: Some(v0::BotModel {
                     model_name: "bot-edited".into(),
+                    welcome: "".into(),
                     prompts: v0::PromptTemplate {
                         system_prompt: "new prompt".into()
                     },
@@ -347,6 +350,7 @@ mod tests {
                 "owner":"1230",
                 "model":{
                     "model_name":"gpt-4",
+                    "welcome":"",
                     "prompts":{"system_prompt":""},
                     "temperature":2.0
                 }

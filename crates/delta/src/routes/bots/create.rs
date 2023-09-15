@@ -213,6 +213,7 @@ mod test {
             "bot_type":"custom_bot",
             "model":{
                 "model_name":"gpt-4",
+                "welcome":"hello, welcome",
                 "prompts":{"system_prompt":""},
                 "temperature":2.0
             }
