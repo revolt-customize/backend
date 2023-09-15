@@ -22,60 +22,71 @@ pub struct DataLogin {
 #[openapi(tag = "Session")]
 #[post("/login", data = "<data>")]
 pub async fn login(
-    db: &State<Database>,
+    user: User,
+    // db: &State<Database>,
     authifier: &State<Authifier>,
     data: Json<DataLogin>,
-    cookies: &CookieJar<'_>,
-    headers: Headers<'_>,
+    // cookies: &CookieJar<'_>,
+    // headers: Headers<'_>,
 ) -> Result<Json<ResponseLogin>> {
     let data = data.into_inner();
-
-    let mut cookie_str = String::new();
-    for cookie in cookies.iter() {
-        cookie_str.push_str(&format!("{}={}; ", cookie.name(), cookie.value()));
-    }
-
-    let config = revolt_config::config().await;
-    let service_url = headers.0.get("Referer").next().unwrap_or("");
-    let url = format!(
-        "{}/v1/login?service={}",
-        config.api.botservice.chatall_server, service_url
-    );
-
-    let client = reqwest::Client::new();
-    let response: v0::UUAPResponse = client
-        .get(url.clone())
-        .header(COOKIE, cookie_str)
-        .send()
+    let account = authifier.database.find_account(&user.id).await.unwrap();
+    let session = account
+        .create_session(authifier, data.friendly_name.unwrap_or("".into()))
         .await
-        .expect("SendRequestFailed")
-        .json()
-        .await
-        .expect("ParseJsonFailed");
+        .unwrap();
 
-    match &response.data {
-        v0::UUAPResponseData::Forbidden { username } => Err(create_error!(ForbiddenUser {
-            username: username.clone()
-        })),
-        v0::UUAPResponseData::Redirect(uri) => {
-            Err(create_error!(LoginRedirect { uri: uri.clone() }))
-        }
+    Ok(Json(ResponseLogin::Success(session)))
 
-        v0::UUAPResponseData::Success { user, .. } => {
-            let (account, _user) = User::get_or_create_new_user(
-                authifier,
-                db,
-                user.username.clone(),
-                user.email.clone(),
-            )
-            .await?;
+    // let data = data.into_inner();
 
-            let session = account
-                .create_session(authifier, data.friendly_name.unwrap_or("".into()))
-                .await
-                .unwrap();
+    // let mut cookie_str = String::new();
+    // for cookie in cookies.iter() {
+    //     cookie_str.push_str(&format!("{}={}; ", cookie.name(), cookie.value()));
+    // }
 
-            Ok(Json(ResponseLogin::Success(session)))
-        }
-    }
+    // let config = revolt_config::config().await;
+    // let service_url = headers.0.get("Referer").next().unwrap_or("");
+    // let ticket = headers.0.get("ticket").next().unwrap_or("");
+    // let url = format!(
+    //     "{}/v1/login?service={}&ticket={}",
+    //     config.api.botservice.chatall_server, service_url, ticket
+    // );
+
+    // let client = reqwest::Client::new();
+    // let response: v0::UUAPResponse = client
+    //     .get(url.clone())
+    //     .header(COOKIE, cookie_str)
+    //     .send()
+    //     .await
+    //     .expect("SendRequestFailed")
+    //     .json()
+    //     .await
+    //     .expect("ParseJsonFailed");
+
+    // match &response.data {
+    //     v0::UUAPResponseData::Forbidden { username } => Err(create_error!(ForbiddenUser {
+    //         username: username.clone()
+    //     })),
+    //     v0::UUAPResponseData::Redirect(uri) => {
+    //         Err(create_error!(LoginRedirect { uri: uri.clone() }))
+    //     }
+
+    //     v0::UUAPResponseData::Success { user, .. } => {
+    //         let (account, _user) = User::get_or_create_new_user(
+    //             authifier,
+    //             db,
+    //             user.username.clone(),
+    //             user.email.clone(),
+    //         )
+    //         .await?;
+
+    //         let session = account
+    //             .create_session(authifier, data.friendly_name.unwrap_or("".into()))
+    //             .await
+    //             .unwrap();
+
+    //         Ok(Json(ResponseLogin::Success(session)))
+    //     }
+    // }
 }

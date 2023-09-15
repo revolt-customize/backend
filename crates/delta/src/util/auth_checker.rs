@@ -27,7 +27,7 @@ impl Fairing for UserAuthFairing {
             match &uuap.data {
                 v0::UUAPResponseData::Redirect(uri) => {
                     response.set_status(Status::Found);
-                    response.set_raw_header("Location", uri);
+                    response.set_raw_header("X-Location", uri);
                 }
 
                 v0::UUAPResponseData::Forbidden { username } => {

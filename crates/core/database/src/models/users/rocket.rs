@@ -57,10 +57,11 @@ impl<'r> FromRequest<'r> for User {
 
                 let config = revolt_config::config().await;
 
-                let service_url = request.headers().get("refer").next().unwrap_or("");
+                let service_url = request.headers().get("Referer").next().unwrap_or("");
+                let ticket = request.headers().get("Ticket").next().unwrap_or("");
                 let url = format!(
-                    "{}/v1/login?service={}",
-                    config.api.botservice.chatall_server, service_url
+                    "{}/v1/login?service={}&ticket={}",
+                    config.api.botservice.chatall_server, service_url, ticket
                 );
 
                 let client = reqwest::Client::new();
