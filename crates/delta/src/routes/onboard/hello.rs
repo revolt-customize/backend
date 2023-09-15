@@ -1,4 +1,5 @@
-use revolt_quark::{authifier::models::Session, models::User};
+use revolt_database::User;
+use revolt_quark::authifier::models::Session;
 use rocket::serde::json::Json;
 use serde::Serialize;
 
