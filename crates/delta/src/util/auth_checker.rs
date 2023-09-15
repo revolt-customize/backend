@@ -39,6 +39,7 @@ impl Fairing for UserAuthFairing {
                     .unwrap();
                     response.set_sized_body(string.len(), Cursor::new(string));
                     response.set_header(ContentType::new("application", "json"));
+                    response.set_raw_header("Access-Control-Allow-Origin", "*");
                 }
 
                 v0::UUAPResponseData::Success { cookie, .. } => {
