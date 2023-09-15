@@ -26,11 +26,12 @@ impl<'r> FromRequest<'r> for User {
                     .map(|x| x.to_string());
 
                 if let Some(bot_token) = header_bot_token {
-                    if let Ok(user) = User::from_token(db, &bot_token).await {
-                        return Some(user);
+                    if let Ok(bot) = db.fetch_bot_by_token(&bot_token).await {
+                        if let Ok(user) = db.fetch_user(&bot.id).await {
+                            return Some(user);
+                        }
                     }
                 } else if let Outcome::Success(session) = request.guard::<Session>().await {
-                    // This uses a guard so can't really easily be refactored into from_token at this stage.
                     if let Ok(user) = db.fetch_user(&session.user_id).await {
                         return Some(user);
                     }
