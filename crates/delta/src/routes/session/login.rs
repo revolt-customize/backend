@@ -2,10 +2,11 @@ use crate::util::header::Headers;
 use reqwest::header::COOKIE;
 use revolt_database::{Database, User};
 use revolt_models::v0;
-use revolt_quark::authifier::{models::Session, Authifier};
+use revolt_quark::authifier::Authifier;
 use revolt_result::{create_error, Result};
 use rocket::State;
 use rocket::{http::CookieJar, serde::json::Json};
+use rocket_authifier::routes::session::login::ResponseLogin;
 use serde::{Deserialize, Serialize};
 
 /// # Login Data
@@ -26,7 +27,7 @@ pub async fn login(
     data: Json<DataLogin>,
     cookies: &CookieJar<'_>,
     headers: Headers<'_>,
-) -> Result<Json<Session>> {
+) -> Result<Json<ResponseLogin>> {
     let data = data.into_inner();
 
     let mut cookie_str = String::new();
@@ -74,7 +75,7 @@ pub async fn login(
                 .await
                 .unwrap();
 
-            Ok(Json(session))
+            Ok(Json(ResponseLogin::Success(session)))
         }
     }
 }
