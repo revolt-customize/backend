@@ -1,6 +1,6 @@
-use revolt_quark::variables::delta::BOT_SERVER_PUBLIC_URL;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
+use rocket_empty::EmptyResponse;
 use serde_json::Value;
 
 /// # develop Bot
@@ -16,8 +16,19 @@ pub async fn develop_bot(target: String, data: Json<Value>) -> Result<String> {
     Ok(response?)
 }
 
+/// # Debug a prompt bot
+///
+/// Debug API for prompt bots
+#[openapi(tag = "Bots")]
+#[post("/develop/general/debug-chat", data = "<data>")]
+pub async fn debug_chat(data: Json<Value>) -> Result<EmptyResponse> {
+    Ok(EmptyResponse)
+}
+
 async fn develop_bot_at_bot_server(target: String, data: Json<Value>) -> Result<String> {
-    let host = BOT_SERVER_PUBLIC_URL.to_string();
+    let config = revolt_config::config().await;
+
+    let host = config.api.botservice.bot_server;
     let url = format!("{host}/api/rest/v1/bot/develop/{target}");
 
     let client = reqwest::Client::new();

@@ -205,6 +205,7 @@ mod tests {
                     system_prompt: "".into(),
                 },
                 temperature: 2.0,
+                welcome: "".into(),
             }),
         };
 

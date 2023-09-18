@@ -216,6 +216,7 @@ mod tests {
                         system_prompt: "system".into(),
                     },
                     temperature: 0.4,
+                    welcome: Default::default(),
                 }),
             });
 
