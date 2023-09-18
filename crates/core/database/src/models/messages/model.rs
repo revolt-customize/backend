@@ -1,13 +1,21 @@
+use std::collections::HashSet;
+
 use indexmap::{IndexMap, IndexSet};
 use iso8601_timestamp::Timestamp;
-use revolt_models::v0::{Embed, MessageAuthor, MessageSort, MessageWebhook, PushNotification};
+use revolt_config::config;
+use revolt_models::v0::{
+    self, DataMessageSend, Embed, MessageAuthor, MessageSort, MessageWebhook, PushNotification,
+    ReplyIntent, SendableEmbed, RE_MENTION,
+};
+use revolt_permissions::{ChannelPermission, PermissionValue};
 use revolt_result::Result;
 use ulid::Ulid;
 
 use crate::{
     events::client::EventV1,
     tasks::{self, ack::AckEvent},
-    Channel, Database, File,
+    util::idempotency::IdempotencyKey,
+    Channel, Database, Emoji, File,
 };
 
 auto_derived_partial!(
@@ -29,9 +37,6 @@ auto_derived_partial!(
         /// Message content
         #[serde(skip_serializing_if = "Option::is_none")]
         pub content: Option<String>,
-        /// Message Components
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub components: Option<Vec<Component>>,
         /// System message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub system: Option<SystemMessage>,
@@ -59,6 +64,15 @@ auto_derived_partial!(
         /// Name and / or avatar overrides for this message
         #[serde(skip_serializing_if = "Option::is_none")]
         pub masquerade: Option<Masquerade>,
+
+        /// Whether the message is streaming message
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub is_stream: Option<bool>,
+        /// Message Components
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub components: Option<Vec<Component>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub session_id: Option<String>,
     },
     "PartialMessage"
 );
@@ -216,12 +230,175 @@ impl Default for Message {
             interactions: Default::default(),
             masquerade: None,
             components: Default::default(),
+            is_stream: None,
+            session_id: None,
         }
     }
 }
 
 #[allow(clippy::disallowed_methods)]
 impl Message {
+    /// Create message from API data
+    pub async fn create_from_api(
+        db: &Database,
+        channel: Channel,
+        data: DataMessageSend,
+        author: MessageAuthor<'_>,
+        mut idempotency: IdempotencyKey,
+        generate_embeds: bool,
+    ) -> Result<Message> {
+        let config = config().await;
+
+        Message::validate_sum(
+            &data.content,
+            data.embeds.as_deref().unwrap_or_default(),
+            config.features.limits.default.message_length,
+        )?;
+
+        idempotency
+            .consume_nonce(data.nonce)
+            .await
+            .map_err(|_| create_error!(InvalidOperation))?;
+
+        // Check the message is not empty
+        if (data.content.as_ref().map_or(true, |v| v.is_empty()))
+            && (data.attachments.as_ref().map_or(true, |v| v.is_empty()))
+            && (data.embeds.as_ref().map_or(true, |v| v.is_empty()))
+        {
+            return Err(create_error!(EmptyMessage));
+        }
+
+        // Ensure restrict_reactions is not specified without reactions list
+        if let Some(interactions) = &data.interactions {
+            if interactions.restrict_reactions {
+                let disallowed = if let Some(list) = &interactions.reactions {
+                    list.is_empty()
+                } else {
+                    true
+                };
+
+                if disallowed {
+                    return Err(create_error!(InvalidProperty));
+                }
+            }
+        }
+
+        let (author_id, webhook) = match &author {
+            MessageAuthor::User(user) => (user.id.clone(), None),
+            MessageAuthor::Webhook(webhook) => (webhook.id.clone(), Some((*webhook).clone())),
+            MessageAuthor::System { .. } => ("00000000000000000000000000".to_string(), None),
+        };
+
+        // Start constructing the message
+        let message_id = Ulid::new().to_string();
+        let mut message = Message {
+            id: message_id.clone(),
+            is_stream: data.is_stream,
+            session_id: data.session_id,
+            components: data
+                .components
+                .map(|components| components.into_iter().map(|x| x.into()).collect()),
+            channel: channel.id(),
+            masquerade: data.masquerade.map(|masquerade| masquerade.into()),
+            interactions: data
+                .interactions
+                .map(|interactions| interactions.into())
+                .unwrap_or_default(),
+            author: author_id,
+            webhook: webhook.map(|w| w.into()),
+            ..Default::default()
+        };
+
+        // Parse mentions in message.
+        let mut mentions = HashSet::new();
+        if let Some(content) = &data.content {
+            for capture in RE_MENTION.captures_iter(content) {
+                if let Some(mention) = capture.get(1) {
+                    mentions.insert(mention.as_str().to_string());
+                }
+            }
+        }
+
+        // Verify replies are valid.
+        let mut replies = HashSet::new();
+        if let Some(entries) = data.replies {
+            if entries.len() > config.features.limits.default.message_replies {
+                return Err(create_error!(TooManyReplies {
+                    max: config.features.limits.default.message_replies,
+                }));
+            }
+
+            for ReplyIntent { id, mention } in entries {
+                let message = db.fetch_message(&id).await?;
+
+                if mention {
+                    mentions.insert(message.author.to_owned());
+                }
+
+                replies.insert(message.id);
+            }
+        }
+
+        if !mentions.is_empty() {
+            message.mentions.replace(mentions.into_iter().collect());
+        }
+
+        if !replies.is_empty() {
+            message
+                .replies
+                .replace(replies.into_iter().collect::<Vec<String>>());
+        }
+
+        // Add attachments to message.
+        let mut attachments = vec![];
+        if data
+            .attachments
+            .as_ref()
+            .is_some_and(|v| v.len() > config.features.limits.default.message_attachments)
+        {
+            return Err(create_error!(TooManyAttachments {
+                max: config.features.limits.default.message_attachments,
+            }));
+        }
+
+        if data
+            .embeds
+            .as_ref()
+            .is_some_and(|v| v.len() > config.features.limits.default.message_embeds)
+        {
+            return Err(create_error!(TooManyEmbeds {
+                max: config.features.limits.default.message_embeds,
+            }));
+        }
+
+        for attachment_id in data.attachments.as_deref().unwrap_or_default() {
+            attachments.push(
+                db.find_and_use_attachment(attachment_id, "attachments", "message", &message_id)
+                    .await?,
+            );
+        }
+
+        if !attachments.is_empty() {
+            message.attachments.replace(attachments);
+        }
+
+        // Process included embeds.
+        for sendable_embed in data.embeds.unwrap_or_default() {
+            message.attach_sendable_embed(db, sendable_embed).await?;
+        }
+
+        // Set content
+        message.content = data.content;
+
+        // Pass-through nonce value for clients
+        message.nonce = Some(idempotency.into_key());
+
+        // Send the message
+        message.send(db, author, &channel, generate_embeds).await?;
+
+        Ok(message)
+    }
+
     /// Send a message without any notifications
     pub async fn send_without_notifications(
         &mut self,
@@ -319,6 +496,64 @@ impl Message {
 
         Ok(())
     }
+
+    /// Convert sendable embed to text embed and attach to message
+    pub async fn attach_sendable_embed(
+        &mut self,
+        db: &Database,
+        embed: v0::SendableEmbed,
+    ) -> Result<()> {
+        let media: Option<v0::File> = if let Some(id) = embed.media {
+            Some(
+                db.find_and_use_attachment(&id, "attachments", "message", &self.id)
+                    .await?
+                    .into(),
+            )
+        } else {
+            None
+        };
+
+        let embed = v0::Embed::Text(v0::Text {
+            icon_url: embed.icon_url,
+            url: embed.url,
+            title: embed.title,
+            description: embed.description,
+            media,
+            colour: embed.colour,
+        });
+
+        if let Some(embeds) = &mut self.embeds {
+            embeds.push(embed);
+        } else {
+            self.embeds = Some(vec![embed]);
+        }
+
+        Ok(())
+    }
+
+    /// Validate the sum of content of a message is under threshold
+    pub fn validate_sum(
+        content: &Option<String>,
+        embeds: &[SendableEmbed],
+        max_length: usize,
+    ) -> Result<()> {
+        let mut running_total = 0;
+        if let Some(content) = content {
+            running_total += content.len();
+        }
+
+        for embed in embeds {
+            if let Some(desc) = &embed.description {
+                running_total += desc.len();
+            }
+        }
+
+        if running_total <= max_length {
+            Ok(())
+        } else {
+            Err(create_error!(PayloadTooLarge))
+        }
+    }
 }
 
 impl SystemMessage {
@@ -335,6 +570,27 @@ impl SystemMessage {
 }
 
 impl Interactions {
+    /// Validate interactions info is correct
+    pub async fn validate(&self, db: &Database, permissions: &PermissionValue) -> Result<()> {
+        let config = config().await;
+
+        if let Some(reactions) = &self.reactions {
+            permissions.throw_if_lacking_channel_permission(ChannelPermission::React)?;
+
+            if reactions.len() > config.features.limits.default.message_reactions {
+                return Err(create_error!(InvalidOperation));
+            }
+
+            for reaction in reactions {
+                if !Emoji::can_use(db, reaction).await? {
+                    return Err(create_error!(InvalidOperation));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Check if we can use a given emoji to react
     pub fn can_use(&self, emoji: &str) -> bool {
         if self.restrict_reactions {

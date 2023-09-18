@@ -1,9 +1,10 @@
 use std::{collections::HashSet, time::Duration};
 
-use crate::{events::client::EventV1, Database, File, RatelimitEvent};
+use crate::{events::client::EventV1, Channel, Database, File, RatelimitEvent};
 
 use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
+use revolt_models::v0;
 use revolt_result::{create_error, Error, ErrorType, Result};
 use ulid::Ulid;
 
@@ -207,6 +208,21 @@ impl User {
 
         db.insert_user(&user).await?;
         Ok(user)
+    }
+
+    /// Get the relationship with another user
+    pub fn relationship_with(&self, user_b: &str) -> RelationshipStatus {
+        if self.id == user_b {
+            return RelationshipStatus::User;
+        }
+
+        if let Some(relations) = &self.relations {
+            if let Some(relationship) = relations.iter().find(|x| x.id == user_b) {
+                return relationship.status.clone();
+            }
+        }
+
+        RelationshipStatus::None
     }
 
     /// Check whether two users have a mutual connection
@@ -424,5 +440,49 @@ impl User {
             ],
         )
         .await
+    }
+
+    pub async fn from_token(db: &Database, token: &str) -> Result<User> {
+        db.fetch_user(&db.fetch_bot_by_token(token).await?.id).await
+    }
+}
+
+impl User {
+    /// prepare on board data for the first time login
+    pub async fn prepare_on_board_data(db: &Database, user_id: String) -> Result<()> {
+        let config = revolt_config::config().await;
+        if config.api.botservice.official_model_bots.is_empty() {
+            return Ok(());
+        }
+
+        let mut users = HashSet::new();
+        users.insert(user_id.clone());
+
+        for id in config.api.botservice.official_model_bots.as_slice() {
+            users.insert(id.clone());
+            Channel::DirectMessage {
+                id: Ulid::new().to_string(),
+                active: true,
+                recipients: vec![id.clone(), user_id.clone()],
+                last_message_id: None,
+            }
+            .create(db)
+            .await?;
+        }
+
+        let _ = Channel::create_group(
+            db,
+            v0::DataCreateGroup {
+                name: "多模型群聊".into(),
+                description: Some("默认群聊，可以通过@来调用大模型".into()),
+                icon: None,
+                users,
+                nsfw: None,
+            },
+            user_id.clone(),
+        )
+        .await?;
+
+        Ok(())
     }
 }

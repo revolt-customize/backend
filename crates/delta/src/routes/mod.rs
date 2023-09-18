@@ -14,6 +14,7 @@ mod push;
 mod root;
 mod safety;
 mod servers;
+mod session;
 mod sync;
 mod users;
 mod webhooks;
@@ -35,7 +36,8 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/custom" => customisation::routes(),
             "/safety" => safety::routes(),
             "/auth/account" => rocket_authifier::routes::account::routes(),
-            "/auth/session" => rocket_authifier::routes::session::routes(),
+            // "/auth/session" => rocket_authifier::routes::session::routes(),
+            "/auth/session"=>session::routes(),
             "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
             "/onboard" => onboard::routes(),
             "/push" => push::routes(),
@@ -56,7 +58,8 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/custom" => customisation::routes(),
             "/safety" => safety::routes(),
             "/auth/account" => rocket_authifier::routes::account::routes(),
-            "/auth/session" => rocket_authifier::routes::session::routes(),
+            // "/auth/session" => rocket_authifier::routes::session::routes(),
+            "/auth/session"=>session::routes(),
             "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
             "/onboard" => onboard::routes(),
             "/push" => push::routes(),

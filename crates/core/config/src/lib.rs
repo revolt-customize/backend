@@ -13,8 +13,8 @@ static CONFIG_BUILDER: Lazy<RwLock<Config>> = Lazy::new(|| {
             FileFormat::Toml,
         ));
 
-        if std::path::Path::new("revolt.toml").exists() {
-            builder = builder.add_source(File::new("revolt.toml", FileFormat::Toml));
+        if std::path::Path::new("Revolt.toml").exists() {
+            builder = builder.add_source(File::new("Revolt.toml", FileFormat::Toml));
         }
 
         builder.build().unwrap()
@@ -91,15 +91,26 @@ pub struct Api {
     pub fcm: ApiFcm,
     pub security: ApiSecurity,
     pub workers: ApiWorkers,
+    pub botservice: BotService,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct BotService {
+    pub bot_server: String,
+    pub chatall_server: String,
+    pub official_custom_bots: Vec<String>,
+    pub official_model_bots: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct FeaturesLimits {
     pub group_size: usize,
     pub bots: usize,
+    pub message_length: usize,
     pub message_replies: usize,
     pub message_attachments: usize,
     pub message_embeds: usize,
+    pub message_reactions: usize,
     pub servers: usize,
     pub server_emoji: usize,
     pub server_roles: usize,
@@ -148,6 +159,15 @@ pub async fn read() -> Config {
 #[cached(time = 30)]
 pub async fn config() -> Settings {
     read().await.try_deserialize::<Settings>().unwrap()
+}
+
+pub async fn from_file(filename: &str) -> Settings {
+    Config::builder()
+        .add_source(File::new(filename, FileFormat::Toml))
+        .build()
+        .unwrap()
+        .try_deserialize::<Settings>()
+        .unwrap()
 }
 
 #[cfg(feature = "test")]

@@ -278,6 +278,15 @@ impl From<crate::EmojiParent> for EmojiParent {
     }
 }
 
+impl From<EmojiParent> for crate::EmojiParent {
+    fn from(value: EmojiParent) -> Self {
+        match value {
+            EmojiParent::Detached => crate::EmojiParent::Detached,
+            EmojiParent::Server { id } => crate::EmojiParent::Server { id },
+        }
+    }
+}
+
 impl From<crate::File> for File {
     fn from(value: crate::File) -> Self {
         File {
@@ -360,6 +369,8 @@ impl From<crate::Message> for Message {
             components: value
                 .components
                 .map(|component| component.into_iter().map(|x| x.into()).collect()),
+            session_id: value.session_id,
+            is_stream: value.is_stream,
         }
     }
 }
@@ -392,6 +403,8 @@ impl From<crate::PartialMessage> for PartialMessage {
             components: value
                 .components
                 .map(|component| component.into_iter().map(|x| x.into()).collect()),
+            session_id: value.session_id,
+            is_stream: value.is_stream,
         }
     }
 }
@@ -429,6 +442,17 @@ impl From<crate::Interactions> for Interactions {
     }
 }
 
+impl From<Interactions> for crate::Interactions {
+    fn from(value: Interactions) -> Self {
+        crate::Interactions {
+            reactions: value
+                .reactions
+                .map(|reactions| reactions.into_iter().collect()),
+            restrict_reactions: value.restrict_reactions,
+        }
+    }
+}
+
 impl From<crate::AppendMessage> for AppendMessage {
     fn from(value: crate::AppendMessage) -> Self {
         AppendMessage {
@@ -440,6 +464,16 @@ impl From<crate::AppendMessage> for AppendMessage {
 impl From<crate::Masquerade> for Masquerade {
     fn from(value: crate::Masquerade) -> Self {
         Masquerade {
+            name: value.name,
+            avatar: value.avatar,
+            colour: value.colour,
+        }
+    }
+}
+
+impl From<Masquerade> for crate::Masquerade {
+    fn from(value: Masquerade) -> Self {
+        crate::Masquerade {
             name: value.name,
             avatar: value.avatar,
             colour: value.colour,
@@ -632,18 +666,26 @@ impl From<crate::FieldsRole> for FieldsRole {
 }
 
 impl crate::User {
-    pub async fn into<P>(self, perspective: P) -> User
+    pub async fn into<'a, P>(self, perspective: P) -> User
     where
-        P: Into<Option<crate::User>>,
+        P: Into<Option<&'a crate::User>>,
     {
         let relationship = if let Some(perspective) = perspective.into() {
-            perspective
-                .relations
-                .unwrap_or_default()
-                .into_iter()
-                .find(|relationship| relationship.id == self.id)
-                .map(|relationship| relationship.status.into())
-                .unwrap_or_default()
+            if perspective.id == self.id {
+                RelationshipStatus::User
+            } else {
+                perspective
+                    .relations
+                    .as_ref()
+                    .map(|relations| {
+                        relations
+                            .iter()
+                            .find(|relationship| relationship.id == self.id)
+                            .map(|relationship| relationship.status.clone().into())
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default()
+            }
         } else {
             RelationshipStatus::None
         };

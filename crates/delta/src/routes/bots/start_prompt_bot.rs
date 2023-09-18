@@ -1,6 +1,5 @@
 use revolt_database::BotType;
 use revolt_database::{util::reference::Reference, Database, User};
-use revolt_quark::variables::delta::BOT_SERVER_PUBLIC_URL;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
@@ -23,13 +22,13 @@ pub async fn req(
     if bot.owner != user.id {
         return Err(create_error!(NotFound));
     }
-
-    if bot.bot_type != Some(BotType::PromptBot) && (*BOT_SERVER_PUBLIC_URL).is_empty() {
+    let config = revolt_config::config().await;
+    if bot.bot_type != Some(BotType::PromptBot) && config.api.botservice.bot_server.is_empty() {
         return Err(create_error!(InvalidProperty));
     }
 
-    let host = BOT_SERVER_PUBLIC_URL.to_string();
-    let url = format!("{host}/api/rest/v1/bot/startUp");
+    let host = config.api.botservice.bot_server;
+    let url = format!("{host}/api/rest/v1/bot/restart");
     let client = reqwest::Client::new();
     let response = client
         .get(url.clone())

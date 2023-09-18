@@ -60,6 +60,9 @@ pub enum ErrorType {
     TooManyAttachments {
         max: usize,
     },
+    TooManyEmbeds {
+        max: usize,
+    },
     TooManyReplies {
         max: usize,
     },
@@ -89,6 +92,7 @@ pub enum ErrorType {
         max: usize,
     },
     AlreadyInServer,
+    ServerHasDefaultBotAlive,
 
     // ? Bot related errors
     ReachedMaximumBots,
@@ -126,6 +130,13 @@ pub enum ErrorType {
     NoEffect,
     FailedValidation {
         error: String,
+    },
+
+    LoginRedirect {
+        uri: String,
+    },
+    ForbiddenUser {
+        username: String,
     },
 
     // ? Legacy errors

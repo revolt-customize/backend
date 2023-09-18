@@ -297,26 +297,14 @@ pub struct DataMessageSend {
     pub session_id: Option<String>,
 }
 
-#[derive(Validate, Serialize, Deserialize, JsonSchema, Debug, Default, Clone)]
-pub struct Interaction {
-    pub message_id: String,
-    pub nonce: String,
-    pub channel_id: String,
-    pub author_id: String,
-    pub content: String,
-}
-
 #[cfg(test)]
 mod tests {
-    use revolt_models::v0::Component;
+    use revolt_models::v0::{self, Component};
     use serde_json::json;
 
     use crate::{
         events::client::EventV1,
-        models::{
-            message::{Interaction, Interactions},
-            Message,
-        },
+        models::{message::Interactions, Message},
     };
 
     #[test]
@@ -380,7 +368,7 @@ mod tests {
 
         println!("{data} ");
 
-        let interaction_event = EventV1::Interaction(Interaction {
+        let interaction_event = EventV1::Interaction(v0::Interaction {
             message_id: "id".into(),
             nonce: "nonce".into(),
             channel_id: "channer".into(),

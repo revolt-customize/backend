@@ -194,6 +194,7 @@ mod tests {
     use validator::Validate;
 
     #[test]
+    #[cfg(feature = "validator")]
     fn test_validate() {
         let mut bot = DataCreateBot {
             name: "mybot".into(),

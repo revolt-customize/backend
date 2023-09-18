@@ -251,6 +251,10 @@ mod tests {
             let fetched_bot1 = db.fetch_bot(&bot.id).await.unwrap();
             let fetched_bot2 = db.fetch_bot_by_token(&fetched_bot1.token).await.unwrap();
             let fetched_bots = db.fetch_bots_by_user(&owner.id).await.unwrap();
+            let fetched_bots2 = db.fetch_bots(&[bot.id.clone()]).await.unwrap();
+
+            assert_eq!(1, fetched_bots2.len());
+            assert_eq!(fetched_bots, fetched_bots2);
 
             let fetched_user_bot = db.fetch_user(&bot.id).await.unwrap();
             assert_eq!(fetched_user_bot.bot, owner.bot);
