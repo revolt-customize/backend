@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use revolt_quark::models::user::{BotInformation, FieldsUser, PartialUser, User};
+use revolt_models::v0;
+use revolt_quark::models::user::{FieldsUser, PartialUser, User};
 use revolt_quark::models::File;
 use revolt_quark::{Database, Error, Ref, Result};
 
@@ -58,7 +59,7 @@ pub struct DataEditUser {
     /// Bot information
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate]
-    bot: Option<BotInformation>,
+    bot: Option<v0::BotInformation>,
 
     /// Fields to remove from user object
     #[validate(length(min = 1))]
@@ -87,7 +88,7 @@ pub async fn req(
         let is_bot_owner = target_user
             .bot
             .as_ref()
-            .map(|bot| bot.owner == user.id)
+            .map(|bot| bot.owner_id == user.id)
             .unwrap_or_default();
 
         if !is_bot_owner && !user.privileged {
@@ -179,6 +180,7 @@ pub async fn req(
         let mut target_user = target.as_user(db).await?;
         partial.bot = target_user.bot.as_mut().map(|x| {
             x.model = bot.model;
+            x.welcome = bot.welcome;
             x.clone()
         });
     }
@@ -193,10 +195,7 @@ pub async fn req(
 mod tests {
     use revolt_database::{Bot, PartialBot};
     use revolt_models::v0;
-    use revolt_quark::models::{
-        prompt::{BotModel, PromptTemplate},
-        user::BotInformation,
-    };
+
     use rocket::http::{ContentType, Header, Status};
     use validator::Validate;
 
@@ -209,10 +208,10 @@ mod tests {
 
         user.bot = Some(
             v0::BotInformation {
+                welcome: None,
                 owner_id: user.id.clone(),
                 model: Some(v0::BotModel {
                     model_name: "gpt".into(),
-                    welcome: "".into(),
                     prompts: v0::PromptTemplate {
                         system_prompt: "you are a developer".into(),
                     },
@@ -248,12 +247,12 @@ mod tests {
                     profile: None,
                     badges: None,
                     flags: None,
-                    bot: Some(BotInformation {
-                        owner: "new_owner_id".into(),
-                        model: Some(BotModel {
+                    bot: Some(v0::BotInformation {
+                        owner_id: "new_owner_id".into(),
+                        welcome: None,
+                        model: Some(v0::BotModel {
                             model_name: "bot-edited".into(),
-                            welcome: "".into(),
-                            prompts: PromptTemplate {
+                            prompts: v0::PromptTemplate {
                                 system_prompt: "new prompt".into()
                             },
                             temperature: 0.6,
@@ -279,9 +278,9 @@ mod tests {
             bot_user_after_edited.bot.unwrap(),
             v0::BotInformation {
                 owner_id: bot.owner.clone(),
+                welcome: None,
                 model: Some(v0::BotModel {
                     model_name: "bot-edited".into(),
-                    welcome: "".into(),
                     prompts: v0::PromptTemplate {
                         system_prompt: "new prompt".into()
                     },
@@ -348,9 +347,9 @@ mod tests {
         let bot_data = json!({
             "bot":{
                 "owner":"1230",
+                "welcome":"",
                 "model":{
                     "model_name":"gpt-4",
-                    "welcome":"",
                     "prompts":{"system_prompt":""},
                     "temperature":2.0
                 }

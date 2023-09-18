@@ -5,6 +5,7 @@ impl From<BotInformation> for crate::BotInformation {
         crate::BotInformation {
             owner: value.owner_id,
             model: value.model.map(|x| x.into()),
+            welcome: value.welcome,
         }
     }
 }
@@ -22,7 +23,6 @@ impl From<BotModel> for crate::BotModel {
     fn from(value: BotModel) -> Self {
         crate::BotModel {
             model_name: value.model_name,
-            welcome: value.welcome,
             prompts: value.prompts.into(),
             temperature: value.temperature,
         }

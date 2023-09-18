@@ -60,7 +60,7 @@ async fn calculate_permission(data: &mut PermissionCalculator<'_>, db: &crate::D
     }
 
     if let Some(ref bot_info) = user.bot {
-        if bot_info.owner == data.perspective.id {
+        if bot_info.owner_id == data.perspective.id {
             return u32::MAX;
         }
     }

@@ -1,6 +1,7 @@
 use super::File;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use validator::Validate;
 
 /// Regex for valid usernames
 ///
@@ -189,6 +190,7 @@ auto_derived!(
 
 auto_derived_with_no_eq!(
     /// Bot information for if the user is a bot
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct BotInformation {
         /// Id of the owner of this bot
         #[cfg_attr(feature = "serde", serde(rename = "owner"))]
@@ -196,12 +198,13 @@ auto_derived_with_no_eq!(
         #[serde(skip_serializing_if = "Option::is_none")]
         #[validate]
         pub model: Option<BotModel>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub welcome: Option<String>,
     }
 
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
     pub struct BotModel {
         pub model_name: String,
-        pub welcome: String,
         pub prompts: PromptTemplate,
         #[validate(range(min = 0.0, max = 1.0))]
         pub temperature: f32,
@@ -212,7 +215,6 @@ impl Default for BotModel {
     fn default() -> Self {
         Self {
             model_name: "gpt-3.5-turbo".to_owned(),
-            welcome: Default::default(),
             prompts: Default::default(),
             temperature: Default::default(),
         }
@@ -232,5 +234,45 @@ impl CheckRelationship for Vec<Relationship> {
         }
 
         RelationshipStatus::None
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "validator")]
+mod tests {
+
+    use validator::Validate;
+
+    use crate::v0::{BotInformation, BotModel, PromptTemplate};
+
+    #[test]
+    fn test_default_bot() {
+        let bot_information = BotInformation {
+            owner_id: "id1".into(),
+            model: Some(Default::default()),
+            welcome: None,
+        };
+
+        assert_eq!(
+            bot_information.model.clone().unwrap(),
+            BotModel {
+                model_name: "gpt-3.5-turbo".into(),
+                prompts: PromptTemplate {
+                    system_prompt: "".into()
+                },
+                temperature: 0.0,
+            }
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "validator")]
+    fn test_validate() {
+        let bot_model = BotModel {
+            temperature: 1.4,
+            ..Default::default()
+        };
+
+        assert!(bot_model.validate().is_err());
     }
 }

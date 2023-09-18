@@ -46,6 +46,7 @@ pub async fn create_bot(
     let mut bot_information = v0::BotInformation {
         owner_id: owner.id.clone(),
         model: None,
+        welcome: info.welcome,
     };
 
     let mut bot_type = BotType::CustomBot;
@@ -190,6 +191,7 @@ mod test {
             .header(ContentType::JSON)
             .body(
                 json!(v0::DataCreateBot {
+                    welcome: None,
                     name: TestHarness::rand_string(),
                     bot_type: Some(v0::BotType::PromptBot),
                     model: Some(Default::default())

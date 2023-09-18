@@ -210,13 +210,13 @@ mod tests {
 
             owner.bot = Some(crate::BotInformation {
                 owner: owner.id.clone(),
+                welcome: None,
                 model: Some(crate::BotModel {
                     model_name: "gpt-4".into(),
                     prompts: crate::PromptTemplate {
                         system_prompt: "system".into(),
                     },
                     temperature: 0.4,
-                    welcome: Default::default(),
                 }),
             });
 
