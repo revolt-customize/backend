@@ -1,7 +1,6 @@
 use revolt_database::{Bot, BotType, Channel, Database, Invite, Member, PartialBot, Server, User};
 use revolt_models::v0;
 use revolt_permissions::DEFAULT_PERMISSION_SERVER;
-use revolt_quark::variables::delta::BOT_SERVER_PUBLIC_URL;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
@@ -93,7 +92,9 @@ pub async fn create_bot(
     Member::create(db, &server, &user).await?;
     Member::create(db, &server, &bot_user).await?;
 
-    if bot_type == BotType::PromptBot && !(*BOT_SERVER_PUBLIC_URL).is_empty() {
+    let config = revolt_config::config().await;
+
+    if bot_type == BotType::PromptBot && !config.api.botservice.bot_server.is_empty() {
         let _ = create_bot_at_bot_server(&bot, &bot_user, &user).await;
     }
 
@@ -151,7 +152,8 @@ async fn create_bot_at_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) 
         temperature: model.temperature,
     };
 
-    let host = BOT_SERVER_PUBLIC_URL.to_string();
+    let config = revolt_config::config().await;
+    let host = config.api.botservice.bot_server;
     let url = format!("{host}/api/rest/v1/bot/create");
     let client = reqwest::Client::new();
     let response = client
@@ -213,6 +215,7 @@ mod test {
             "bot_type":"custom_bot",
             "model":{
                 "model_name":"gpt-4",
+                "welcome":"hello, welcome",
                 "prompts":{"system_prompt":""},
                 "temperature":2.0
             }

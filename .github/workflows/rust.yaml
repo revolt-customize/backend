@@ -30,22 +30,28 @@ jobs:
         run: |
           docker-compose -f docker-compose.db.yml up -d
 
+      - name: Copy .env.example
+        run: |
+          cp .env.example .env
+
+      - name: Copy Revolt.test.toml
+        run: |
+          cp Revolt.test.toml Revolt.toml
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
+        env:
+          TEST_DB: REFERENCE
         with:
           command: test
 
       - name: Run cargo test (with MongoDB)
         uses: actions-rs/cargo@v1
         env:
+          TEST_DB: MONGODB
           MONGODB: mongodb://localhost
         with:
           command: test
-
-      - name: Copy .env.example
-        if: github.event_name != 'pull_request' && github.ref_name == 'master'
-        run: |
-          cp .env.example .env
 
       - name: Start API in background
         if: github.event_name != 'pull_request' && github.ref_name == 'master'

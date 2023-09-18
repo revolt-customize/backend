@@ -22,6 +22,7 @@ impl From<BotModel> for crate::BotModel {
     fn from(value: BotModel) -> Self {
         crate::BotModel {
             model_name: value.model_name,
+            welcome: value.welcome,
             prompts: value.prompts.into(),
             temperature: value.temperature,
         }
@@ -32,6 +33,24 @@ impl From<PromptTemplate> for crate::PromptTemplate {
     fn from(value: PromptTemplate) -> Self {
         crate::PromptTemplate {
             system_prompt: value.system_prompt,
+        }
+    }
+}
+
+impl From<Component> for crate::Component {
+    fn from(value: Component) -> Self {
+        match value {
+            Component::Button {
+                label,
+                style,
+                enabled,
+            } => crate::Component::Button {
+                label,
+                style,
+                enabled,
+            },
+            Component::LineBreak => crate::Component::LineBreak,
+            Component::Status { label } => crate::Component::Status { label },
         }
     }
 }

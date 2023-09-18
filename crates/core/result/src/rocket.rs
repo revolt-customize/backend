@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use rocket::{
     http::{ContentType, Status},
-    response::{self, Responder},
+    response::{self, Redirect, Responder},
     Request, Response,
 };
 
@@ -10,7 +10,7 @@ use crate::{Error, ErrorType};
 
 /// HTTP response builder for Error enum
 impl<'r> Responder<'r, 'static> for Error {
-    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
         let status = match self.error_type {
             ErrorType::LabelMe => Status::InternalServerError,
 
@@ -44,8 +44,10 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::InvalidRole => Status::NotFound,
             ErrorType::Banned => Status::Forbidden,
             ErrorType::AlreadyInServer => Status::Conflict,
+            ErrorType::ServerHasDefaultBotAlive => Status::Forbidden,
 
             ErrorType::TooManyServers { .. } => Status::BadRequest,
+            ErrorType::TooManyEmbeds { .. } => Status::BadRequest,
             ErrorType::TooManyEmoji { .. } => Status::BadRequest,
             ErrorType::TooManyChannels { .. } => Status::BadRequest,
             ErrorType::TooManyRoles { .. } => Status::BadRequest,
@@ -75,6 +77,12 @@ impl<'r> Responder<'r, 'static> for Error {
             ErrorType::NotFound => Status::NotFound,
             ErrorType::NoEffect => Status::Ok,
             ErrorType::FailedValidation { .. } => Status::BadRequest,
+
+            // handled in auth_checker
+            ErrorType::LoginRedirect { uri } => {
+                return Redirect::found(uri).respond_to(req);
+            }
+            ErrorType::ForbiddenUser { .. } => Status::Forbidden,
         };
 
         // Serialize the error data structure into JSON.

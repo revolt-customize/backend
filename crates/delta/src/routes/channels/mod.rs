@@ -17,7 +17,6 @@ mod message_edit;
 mod message_fetch;
 mod message_interactions;
 mod message_query;
-mod message_query_stale;
 mod message_react;
 mod message_search;
 mod message_send;
@@ -32,7 +31,7 @@ mod webhook_fetch_all;
 pub fn routes() -> (Vec<Route>, OpenApi) {
     openapi_get_routes_spec![
         channel_ack::req,
-        channel_fetch::req,
+        channel_fetch::fetch_channel,
         members_fetch::req,
         channel_delete::req,
         channel_edit::req,
@@ -40,12 +39,11 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         message_send::message_send,
         message_query::req,
         message_search::req,
-        message_query_stale::req,
         message_fetch::req,
         message_edit::req,
         message_bulk_delete::req,
         message_delete::req,
-        group_create::req,
+        group_create::create_group,
         group_add_member::req,
         group_remove_member::req,
         voice_join::req,
