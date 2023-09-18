@@ -130,6 +130,7 @@ auto_derived_with_no_eq!(
 
     pub struct BotModel {
         pub model_name: String,
+        pub welcome: String,
         pub prompts: PromptTemplate,
         pub temperature: f32,
     }
@@ -139,6 +140,7 @@ impl Default for BotModel {
     fn default() -> Self {
         Self {
             model_name: "gpt-3.5-turbo".to_owned(),
+            welcome: Default::default(),
             prompts: Default::default(),
             temperature: Default::default(),
         }

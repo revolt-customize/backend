@@ -4,6 +4,7 @@ use rocket::Route;
 mod create;
 mod debug_bot;
 mod delete;
+mod develop;
 mod edit;
 mod fetch;
 mod fetch_discover;
@@ -25,6 +26,7 @@ pub fn routes() -> (Vec<Route>, OpenApi) {
         fetch_discover::fetch_discoverable_bots,
         search_bots::req,
         start_prompt_bot::req,
+        develop::develop_bot,
         debug_bot::req,
     ]
 }
