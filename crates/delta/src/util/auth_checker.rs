@@ -47,6 +47,7 @@ impl Fairing for UserAuthFairing {
                     for (key, value) in cookie {
                         cookie_str.push_str(&format!("{}={}; ", key, value));
                     }
+                    cookie_str.push_str("Path=/; ");
                     response.set_raw_header("Set-Cookie", cookie_str);
                 }
             }
