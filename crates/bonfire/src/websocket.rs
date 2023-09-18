@@ -136,12 +136,22 @@ pub fn spawn_client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
                                             );*/
 
                                             // Handle incoming events.
-                                            match conn.on_message().next().await.map(|res| {
-                                                res.map(|item|(
-                                                    item.get_channel_name().to_string(),
-                                                    redis_kiss::decode_payload::<EventV1>(&item),
-                                                ))
-                                            }) {
+                                            let data = conn
+                                                .on_message()
+                                                .next()
+                                                .await
+                                                .map(|res| {
+                                                    info!("Msg: {res:?}");
+                                                    res.map(|item| {
+                                                        info!("item: {item:?}");
+                                                        (
+                                                            item.get_channel_name().to_string(),
+                                                            redis_kiss::decode_payload::<EventV1>(&item),
+                                                        )
+                                                    })
+                                                });
+                                            
+                                            match data {
                                                 Some(Ok((channel, item))) => {
                                                     if let Ok(mut event) = item {
                                                         if state
@@ -163,7 +173,8 @@ pub fn spawn_client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
                                                 Some(Err(e)) => {
                                                     info!("Error while consuming pub/sub messages: {e:?}");
                                                     sentry::capture_error(&e);
-                                                    break
+                                                    // TODO: fix the bug here
+                                                    // break
                                                 }
                                                 // No more data, assume we disconnected or otherwise
                                                 // something bad occurred, so disconnect user.
