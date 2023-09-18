@@ -19,9 +19,7 @@ impl Fairing for UserAuthFairing {
     }
 
     async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
-        log::info!("catch fairing");
         let uuap_response: &Option<v0::UUAPResponse> = request.local_cache(|| None);
-        log::info!("got uuap : {uuap_response:?}");
 
         if let Some(uuap) = uuap_response {
             match &uuap.data {

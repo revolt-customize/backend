@@ -76,6 +76,7 @@ mod test {
             .header(ContentType::JSON)
             .body(
                 json!(v0::DataCreateBot {
+                    welcome: None,
                     name: TestHarness::rand_string(),
                     bot_type: Some(v0::BotType::PromptBot),
                     model: Some(Default::default())

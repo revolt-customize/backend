@@ -1,10 +1,9 @@
 use num_enum::TryFromPrimitive;
+use revolt_models::v0;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::models::attachment::File;
-
-use super::prompt::BotModel;
 
 /// Utility function to check if a boolean value is false
 pub fn if_false(t: &bool) -> bool {
@@ -111,16 +110,6 @@ pub enum Flags {
     Spam = 8,
 }
 
-/// Bot information for if the user is a bot
-#[derive(Validate, Serialize, Deserialize, JsonSchema, Debug, Clone)]
-pub struct BotInformation {
-    /// Id of the owner of this bot
-    pub owner: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate]
-    pub model: Option<BotModel>,
-}
-
 /// Representiation of a User on Revolt.
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, OptionalStruct, Default)]
 #[optional_derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -163,7 +152,7 @@ pub struct User {
     pub privileged: bool,
     /// Bot information
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bot: Option<BotInformation>,
+    pub bot: Option<v0::BotInformation>,
 
     // ? Entries below should never be pushed to the database
     /// Current session user's relationship with this user

@@ -169,6 +169,7 @@ auto_derived_with_no_eq!(
             validate(length(min = 2, max = 32), regex = "super::RE_USERNAME")
         )]
         pub name: String,
+        pub welcome: Option<String>,
         pub bot_type: Option<BotType>,
         #[cfg_attr(feature = "validator", validate)]
         pub model: Option<BotModel>,
@@ -198,6 +199,7 @@ mod tests {
     fn test_validate() {
         let mut bot = DataCreateBot {
             name: "mybot".into(),
+            welcome: None,
             bot_type: Some(BotType::PromptBot),
             model: Some(BotModel {
                 model_name: "gpt4".into(),
@@ -205,7 +207,6 @@ mod tests {
                     system_prompt: "".into(),
                 },
                 temperature: 2.0,
-                welcome: "".into(),
             }),
         };
 

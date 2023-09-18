@@ -58,6 +58,7 @@ mod test {
         let bot_information = v0::BotInformation {
             owner_id: owner.id.clone(),
             model: Some(Default::default()),
+            welcome: None,
         };
 
         owner.bot = Some(bot_information.into());
