@@ -1,4 +1,4 @@
-use revolt_database::{Database, User};
+use revolt_database::User;
 use revolt_quark::authifier::Authifier;
 use revolt_result::Result;
 use rocket::serde::json::Json;
