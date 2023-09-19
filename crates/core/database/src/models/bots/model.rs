@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
+use revolt_permissions::DEFAULT_PERMISSION_SERVER;
 use revolt_result::Result;
 use ulid::Ulid;
 
-use crate::{Database, PartialServer, PartialUser, User};
+use crate::{Channel, Database, Invite, Member, PartialServer, PartialUser, Server, User};
 
 auto_derived_partial!(
     /// Bot
@@ -197,9 +200,77 @@ impl Bot {
     }
 }
 
+impl Bot {
+    pub async fn prepare_default_channel_for_bot(
+        db: &Database,
+        bot: &mut Bot,
+        bot_user: &User,
+        bot_owner: &User,
+    ) -> Result<()> {
+        let server_id = Ulid::new().to_string();
+        let mut channels: Vec<Channel> = Vec::new();
+        for channel_name in ["BOT使用新手指南", "功能发布", "bug反馈", "大家一起玩"]
+        {
+            let channel = Channel::TextChannel {
+                id: Ulid::new().to_string(),
+                server: server_id.clone(),
+                name: channel_name.into(),
+                description: None,
+                icon: None,
+                last_message_id: None,
+                default_permissions: None,
+                role_permissions: HashMap::new(),
+                nsfw: false,
+            };
+
+            channel.create(db).await?;
+            channels.push(channel);
+        }
+
+        let server = Server {
+            id: server_id,
+            owner: bot.owner.clone(),
+            name: format!("{}的主页", bot_user.username),
+            description: None,
+            channels: channels.iter().map(|x| x.id()).collect(),
+            nsfw: false,
+            default_permissions: *DEFAULT_PERMISSION_SERVER as i64,
+            ..Default::default()
+        };
+
+        server.create(db).await?;
+
+        Member::create(db, &server, bot_owner).await?;
+        Member::create(db, &server, bot_user).await?;
+
+        let mut invite_code: Option<String> = None;
+        let mut default_server: Option<String> = None;
+
+        if let Invite::Server { code, server, .. } =
+            Invite::create_channel_invite(db, bot.owner.clone(), channels.first().unwrap()).await?
+        {
+            invite_code = Some(code);
+            default_server = Some(server)
+        }
+
+        bot.update(
+            db,
+            PartialBot {
+                server_invite: invite_code,
+                default_server,
+                ..Default::default()
+            },
+            vec![],
+        )
+        .await?;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{Bot, BotType, FieldsBot, PartialBot, User};
+    use crate::{Bot, BotType, FieldsBot, Invite, PartialBot, User};
 
     #[async_std::test]
     async fn crud() {
@@ -275,6 +346,77 @@ mod tests {
             assert!(db.fetch_bot(&bot.id).await.is_err());
             assert_eq!(0, db.get_number_of_bots_by_user(&owner.id).await.unwrap());
             assert_eq!(db.fetch_user(&bot.id).await.unwrap().flags, Some(2))
+        });
+    }
+
+    #[async_std::test]
+    async fn test_prepare_default_channel_for_bot() {
+        database_test!(|db| async move {
+            let mut owner = User::create(&db, "Owner".to_string(), None, None)
+                .await
+                .unwrap();
+
+            owner.bot = Some(crate::BotInformation {
+                owner: owner.id.clone(),
+                welcome: None,
+                model: Some(crate::BotModel {
+                    model_name: "gpt-4".into(),
+                    prompts: crate::PromptTemplate {
+                        system_prompt: "system".into(),
+                    },
+                    temperature: 0.4,
+                }),
+            });
+
+            let mut bot = Bot::create(
+                &db,
+                "Bot Name".to_string(),
+                &owner,
+                PartialBot {
+                    token: Some("my token".to_string()),
+                    interactions_url: Some("some url".to_string()),
+                    bot_type: Some(BotType::PromptBot),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+
+            assert!(bot.default_server.is_none());
+            assert!(bot.server_invite.is_none());
+
+            let bot_user = db.fetch_user(&bot.id).await.unwrap();
+
+            Bot::prepare_default_channel_for_bot(&db, &mut bot, &bot_user, &owner)
+                .await
+                .unwrap();
+
+            assert!(bot.server_invite.is_some());
+            assert!(bot.default_server.is_some());
+
+            let server = db.fetch_server(&bot.default_server.unwrap()).await.unwrap();
+            assert_eq!(4, server.channels.len());
+            let channels = db.fetch_channels(&server.channels).await.unwrap();
+            assert_eq!(4, channels.len());
+
+            let invite = db
+                .fetch_invite(bot.server_invite.as_ref().unwrap())
+                .await
+                .unwrap();
+
+            match invite {
+                Invite::Server {
+                    code,
+                    server: _server,
+                    channel,
+                    ..
+                } => {
+                    assert_eq!(Some(code), bot.server_invite);
+                    assert_eq!(_server, server.id);
+                    assert_eq!(channel, channels[0].id());
+                }
+                _ => unreachable!(),
+            }
         });
     }
 }

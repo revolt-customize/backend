@@ -1,11 +1,8 @@
-use revolt_database::{Bot, BotType, Channel, Database, Invite, Member, PartialBot, Server, User};
+use revolt_database::{Bot, BotType, Database, PartialBot, User};
 use revolt_models::v0;
-use revolt_permissions::DEFAULT_PERMISSION_SERVER;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
 use rocket::State;
-use std::collections::HashMap;
-use ulid::Ulid;
 use validator::Validate;
 
 #[derive(Debug, serde::Serialize)]
@@ -63,87 +60,33 @@ pub async fn create_bot(
 
     owner.bot = Some(bot_information.clone().into());
 
-    let (server, channels) = create_default_channel_for_bot(db, info.name.clone(), &owner).await?;
-
-    let mut invite_code: Option<String> = None;
-    let mut default_server: Option<String> = None;
-
-    if let Invite::Server { code, server, .. } =
-        Invite::create_channel_invite(db, user.id.clone(), channels.first().unwrap()).await?
-    {
-        invite_code = Some(code);
-        default_server = Some(server)
-    }
-
-    let bot = Bot::create(
+    let mut bot = Bot::create(
         db,
         info.name.clone(),
         &owner,
         PartialBot {
             bot_type: Some(bot_type.clone()),
-            server_invite: invite_code,
-            default_server,
             ..Default::default()
         },
     )
     .await?;
 
     let bot_user = db.fetch_user(&bot.id).await?;
+    Bot::prepare_default_channel_for_bot(db, &mut bot, &bot_user, &user).await?;
 
-    Member::create(db, &server, &user).await?;
-    Member::create(db, &server, &bot_user).await?;
-
-    let config = revolt_config::config().await;
-
-    if bot_type == BotType::PromptBot && !config.api.botservice.bot_server.is_empty() {
-        let _ = create_bot_at_bot_server(&bot, &bot_user, &user).await;
-    }
+    let _ = create_bot_in_bot_server(&bot, &bot_user, &user).await;
 
     Ok(Json(bot.into()))
 }
 
-async fn create_default_channel_for_bot(
-    db: &Database,
-    bot_name: String,
-    user: &User,
-) -> Result<(Server, Vec<Channel>)> {
-    let server_id = Ulid::new().to_string();
+async fn create_bot_in_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) -> Result<()> {
+    let config = revolt_config::config().await;
 
-    let mut channels: Vec<Channel> = Vec::new();
-
-    for channel_name in ["BOT使用新手指南", "功能发布", "bug反馈", "大家一起玩"] {
-        let channel = Channel::TextChannel {
-            id: Ulid::new().to_string(),
-            server: server_id.clone(),
-            name: channel_name.into(),
-            description: None,
-            icon: None,
-            last_message_id: None,
-            default_permissions: None,
-            role_permissions: HashMap::new(),
-            nsfw: false,
-        };
-
-        channel.create(db).await?;
-        channels.push(channel);
+    let bot_type = bot.bot_type.as_ref().unwrap();
+    if *bot_type != BotType::PromptBot || config.api.botservice.bot_server.is_empty() {
+        return Ok(());
     }
 
-    let server = Server {
-        id: server_id.clone(),
-        owner: user.id.clone(),
-        name: bot_name + "的主页",
-        description: None,
-        channels: channels.iter().map(|x| x.id()).collect(),
-        nsfw: false,
-        default_permissions: *DEFAULT_PERMISSION_SERVER as i64,
-        ..Default::default()
-    };
-
-    server.create(db).await?;
-    Ok((server, channels))
-}
-
-async fn create_bot_at_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) -> Result<()> {
     let model = bot_user.bot.as_ref().unwrap().model.as_ref().unwrap();
 
     let data = CreatePromptBotReq {
@@ -157,7 +100,6 @@ async fn create_bot_at_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) 
         temperature: model.temperature,
     };
 
-    let config = revolt_config::config().await;
     let host = config.api.botservice.bot_server;
     let url = format!("{host}/api/rest/v1/bot/create");
     let client = reqwest::Client::new();

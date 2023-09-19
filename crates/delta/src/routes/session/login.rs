@@ -20,11 +20,8 @@ pub struct DataLogin {
 #[post("/login", data = "<data>")]
 pub async fn login(
     user: User,
-    // db: &State<Database>,
     authifier: &State<Authifier>,
     data: Json<DataLogin>,
-    // cookies: &CookieJar<'_>,
-    // headers: Headers<'_>,
 ) -> Result<Json<ResponseLogin>> {
     let data = data.into_inner();
     let account = authifier.database.find_account(&user.id).await.unwrap();
