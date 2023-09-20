@@ -1,5 +1,5 @@
 use super::users::BotModel;
-use super::User;
+use super::{BotInformation, User};
 use validator::Validate;
 
 auto_derived!(
@@ -173,9 +173,10 @@ auto_derived_with_no_eq!(
         #[cfg_attr(feature = "validator", validate)]
         pub model: Option<BotModel>,
 
-        pub welcome_msg: Option<String>,
-        pub role_requirements: Option<String>,
-        pub introduction: Option<String>,
+        #[cfg_attr(feature = "validator", validate)]
+        pub bot_information: Option<BotInformation>,
+        #[cfg_attr(feature = "validator", validate)]
+        pub profile: Option<UserProfileData>,
     }
 
     /// Owned Bots Response
@@ -188,6 +189,19 @@ auto_derived_with_no_eq!(
         pub bots: Vec<Bot>,
         /// User objects
         pub users: Vec<User>,
+    }
+
+    /// # Profile Data
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    pub struct UserProfileData {
+        /// Text to set as user profile description
+        #[validate(length(min = 0, max = 2000))]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        content: Option<String>,
+        /// Attachment Id for background
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[validate(length(min = 1, max = 128))]
+        background: Option<String>,
     }
 );
 
@@ -211,9 +225,8 @@ mod tests {
                 },
                 temperature: 2.0,
             }),
-            welcome_msg: None,
-            role_requirements: None,
-            introduction: None,
+            bot_information: None,
+            profile: None,
         };
 
         assert!(bot.validate().map_err(|e| println!("{e}")).is_err());

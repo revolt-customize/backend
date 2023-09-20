@@ -43,7 +43,7 @@ pub async fn create_bot(
     let mut bot_information = v0::BotInformation {
         owner_id: owner.id.clone(),
         model: None,
-        welcome: info.welcome_msg,
+        welcome: None,
     };
 
     let mut bot_type = BotType::CustomBot;
@@ -141,9 +141,8 @@ mod test {
                     name: TestHarness::rand_string(),
                     bot_type: Some(v0::BotType::PromptBot),
                     model: Some(Default::default()),
-                    welcome_msg: None,
-                    role_requirements: None,
-                    introduction: None
+                    bot_information: None,
+                    profile: None
                 })
                 .to_string(),
             )

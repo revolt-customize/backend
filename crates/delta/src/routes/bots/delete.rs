@@ -79,9 +79,8 @@ mod test {
                     name: TestHarness::rand_string(),
                     bot_type: Some(v0::BotType::PromptBot),
                     model: Some(Default::default()),
-                    welcome_msg: None,
-                    role_requirements: None,
-                    introduction: None
+                    bot_information: None,
+                    profile: None
                 })
                 .to_string(),
             )
