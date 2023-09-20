@@ -185,6 +185,7 @@ auto_derived!(
     #[derive(Default)]
     pub struct PromptTemplate {
         pub system_prompt: String,
+        pub role_requirements: String,
     }
 );
 
@@ -258,7 +259,8 @@ mod tests {
             BotModel {
                 model_name: "gpt-3.5-turbo".into(),
                 prompts: PromptTemplate {
-                    system_prompt: "".into()
+                    system_prompt: "".into(),
+                    role_requirements: "".into(),
                 },
                 temperature: 0.0,
             }

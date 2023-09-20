@@ -33,6 +33,7 @@ impl From<PromptTemplate> for crate::PromptTemplate {
     fn from(value: PromptTemplate) -> Self {
         crate::PromptTemplate {
             system_prompt: value.system_prompt,
+            role_requirements: Some(value.role_requirements),
         }
     }
 }

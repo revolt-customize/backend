@@ -116,6 +116,8 @@ auto_derived!(
     #[derive(Default)]
     pub struct PromptTemplate {
         pub system_prompt: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub role_requirements: Option<String>,
     }
 );
 

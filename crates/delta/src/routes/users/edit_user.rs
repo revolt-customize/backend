@@ -214,6 +214,7 @@ mod tests {
                     model_name: "gpt".into(),
                     prompts: v0::PromptTemplate {
                         system_prompt: "you are a developer".into(),
+                        role_requirements: "".into(),
                     },
                     temperature: 0.5,
                 }),
@@ -253,7 +254,8 @@ mod tests {
                         model: Some(v0::BotModel {
                             model_name: "bot-edited".into(),
                             prompts: v0::PromptTemplate {
-                                system_prompt: "new prompt".into()
+                                system_prompt: "new prompt".into(),
+                                role_requirements: "".into(),
                             },
                             temperature: 0.6,
                         })
@@ -282,7 +284,8 @@ mod tests {
                 model: Some(v0::BotModel {
                     model_name: "bot-edited".into(),
                     prompts: v0::PromptTemplate {
-                        system_prompt: "new prompt".into()
+                        system_prompt: "new prompt".into(),
+                        role_requirements: "".into(),
                     },
                     temperature: 0.6,
                 })
@@ -350,7 +353,7 @@ mod tests {
                 "welcome":"",
                 "model":{
                     "model_name":"gpt-4",
-                    "prompts":{"system_prompt":""},
+                    "prompts":{"system_prompt":"","role_requirements":""},
                     "temperature":2.0
                 }
             }

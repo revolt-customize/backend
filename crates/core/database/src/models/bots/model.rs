@@ -215,6 +215,7 @@ mod tests {
                     model_name: "gpt-4".into(),
                     prompts: crate::PromptTemplate {
                         system_prompt: "system".into(),
+                        role_requirements: None,
                     },
                     temperature: 0.4,
                 }),

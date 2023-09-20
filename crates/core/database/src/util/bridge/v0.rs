@@ -847,6 +847,7 @@ impl From<crate::PromptTemplate> for PromptTemplate {
     fn from(value: crate::PromptTemplate) -> Self {
         PromptTemplate {
             system_prompt: value.system_prompt,
+            role_requirements: value.role_requirements.unwrap_or("".into()),
         }
     }
 }
