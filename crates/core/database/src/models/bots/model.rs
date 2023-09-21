@@ -140,6 +140,51 @@ impl Bot {
         Ok(bot)
     }
 
+    /// Create a new bot with partial user
+    pub async fn create_with_user<D, E>(
+        db: &Database,
+        username: String,
+        owner_id: String,
+        data: D,
+        partial_user: E,
+    ) -> Result<(Bot, User)>
+    where
+        D: Into<Option<PartialBot>>,
+        E: Into<Option<PartialUser>>,
+    {
+        // TODO: config
+        let max_bot_count = 10;
+        if db.get_number_of_bots_by_user(&owner_id).await? >= max_bot_count {
+            return Err(create_error!(ReachedMaximumBots));
+        }
+
+        let id = Ulid::new().to_string();
+
+        let mut p_user = PartialUser {
+            ..Default::default()
+        };
+
+        if let Some(partial_user) = partial_user.into() {
+            p_user = partial_user;
+        }
+
+        let bot_user = User::create(db, username, Some(id.to_string()), Some(p_user)).await?;
+
+        let mut bot = Bot {
+            id,
+            owner: owner_id.to_string(),
+            token: nanoid::nanoid!(64),
+            ..Default::default()
+        };
+
+        if let Some(data) = data.into() {
+            bot.apply_options(data);
+        }
+
+        db.insert_bot(&bot).await?;
+        Ok((bot, bot_user))
+    }
+
     /// Remove a field from this object
     pub fn remove_field(&mut self, field: &FieldsBot) {
         match field {

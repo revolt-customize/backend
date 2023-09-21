@@ -1,4 +1,4 @@
-use revolt_database::{Bot, BotType, Database, PartialBot, User};
+use revolt_database::{Bot, BotType, Database, PartialBot, PartialUser, User, UserProfile};
 use revolt_models::v0;
 use revolt_result::{create_error, Result};
 use rocket::serde::json::Json;
@@ -38,40 +38,71 @@ pub async fn create_bot(
         })
     })?;
 
-    let mut owner = user.clone();
-
     let mut bot_information = v0::BotInformation {
-        owner_id: owner.id.clone(),
-        model: None,
-        welcome: None,
+        owner_id: user.id.clone(),
+        ..Default::default()
     };
 
     let mut bot_type = BotType::CustomBot;
 
     if let Some(v0::BotType::PromptBot) = info.bot_type {
         bot_type = BotType::PromptBot;
-        match info.model {
-            Some(m) => bot_information.model = Some(m),
-            None => {
-                bot_information.model = Some(Default::default());
+
+        match info.bot_information {
+            Some(bot_info) => {
+                bot_information = bot_info.clone();
+                bot_information.owner_id = user.id.clone();
+
+                let bot_model = match bot_info.model {
+                    Some(m) => Some(m),
+                    None => Some(Default::default()),
+                };
+
+                let default_bot_model: v0::BotModel = Default::default();
+                bot_information.model = Some(v0::BotModel {
+                    model_name: default_bot_model.model_name,
+                    ..bot_model.unwrap()
+                });
             }
-        }
+            None => {
+                let bot_model = match info.model {
+                    Some(m) => Some(m),
+                    None => Some(Default::default()),
+                };
+
+                let default_bot_model: v0::BotModel = Default::default();
+                bot_information.model = Some(v0::BotModel {
+                    model_name: default_bot_model.model_name,
+                    ..bot_model.unwrap()
+                });
+            }
+        };
     }
 
-    owner.bot = Some(bot_information.clone().into());
+    let mut partial_user = PartialUser {
+        bot: Some(bot_information.clone().into()),
+        ..Default::default()
+    };
 
-    let mut bot = Bot::create(
+    if let Some(profile_data) = info.profile {
+        partial_user.profile = Some(UserProfile {
+            content: profile_data.content.unwrap_or("".into()),
+            ..Default::default()
+        })
+    }
+
+    let (mut bot, bot_user) = Bot::create_with_user(
         db,
         info.name.clone(),
-        &owner,
+        user.id.clone(),
         PartialBot {
             bot_type: Some(bot_type.clone()),
             ..Default::default()
         },
+        partial_user,
     )
     .await?;
 
-    let bot_user = db.fetch_user(&bot.id).await?;
     Bot::prepare_default_channel_for_bot(db, &mut bot, &bot_user, &user).await?;
 
     let _ = create_bot_in_bot_server(&bot, &bot_user, &user).await;
@@ -121,7 +152,7 @@ async fn create_bot_in_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) 
 #[cfg(test)]
 mod test {
     use crate::{rocket, util::test::TestHarness};
-    use revolt_database::Invite;
+    use revolt_database::{BotInformation, Invite, UserProfile};
     use revolt_models::v0;
     use rocket::http::{ContentType, Header, Status};
     use validator::Validate;
@@ -129,7 +160,7 @@ mod test {
     #[rocket::async_test]
     async fn create_bot() {
         let harness = TestHarness::new().await;
-        let (_, session, _) = harness.new_user().await;
+        let (_, session, user) = harness.new_user().await;
 
         let response = harness
             .client
@@ -141,8 +172,22 @@ mod test {
                     name: TestHarness::rand_string(),
                     bot_type: Some(v0::BotType::PromptBot),
                     model: Some(Default::default()),
-                    bot_information: None,
-                    profile: None
+                    bot_information: Some(v0::BotInformation {
+                        owner_id: "wrong id".into(),
+                        model: Some(v0::BotModel {
+                            model_name: "model name".into(),
+                            prompts: v0::PromptTemplate {
+                                system_prompt: "system_prompt".into(),
+                                role_requirements: "role_requirements".into(),
+                            },
+                            temperature: 0.5
+                        }),
+                        welcome: Some("welcome msg".into())
+                    }),
+                    profile: Some(v0::UserProfileData {
+                        content: Some("background msg".into()),
+                        ..Default::default()
+                    })
                 })
                 .to_string(),
             )
@@ -153,6 +198,31 @@ mod test {
 
         let bot_response: v0::Bot = response.into_json().await.expect("`Bot`");
         let bot = harness.db.fetch_bot(&bot_response.id).await.unwrap();
+        let bot_user = harness.db.fetch_user(&bot_response.id).await.unwrap();
+
+        let mut bot_model: v0::BotModel = Default::default();
+        bot_model.prompts.role_requirements = "role_requirements".into();
+        bot_model.prompts.system_prompt = "system_prompt".into();
+        bot_model.temperature = 0.5;
+
+        // check user.bot field
+        assert_eq!(
+            Some(BotInformation {
+                owner: user.id,
+                model: Some(bot_model.into()),
+                welcome: Some("welcome msg".into()),
+            }),
+            bot_user.bot
+        );
+
+        // check user.profile field
+        assert_eq!(
+            Some(UserProfile {
+                content: "background msg".into(),
+                background: None
+            }),
+            bot_user.profile
+        );
 
         assert!(bot.server_invite.is_some());
         assert!(bot.default_server.is_some());

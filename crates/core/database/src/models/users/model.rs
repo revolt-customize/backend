@@ -104,6 +104,7 @@ auto_derived!(
     }
 
     /// User's profile
+    #[derive(Default)]
     pub struct UserProfile {
         /// Text content on user's profile
         #[serde(skip_serializing_if = "String::is_empty", default)]

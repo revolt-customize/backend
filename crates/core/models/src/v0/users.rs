@@ -192,6 +192,7 @@ auto_derived!(
 auto_derived_with_no_eq!(
     /// Bot information for if the user is a bot
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    #[derive(Default)]
     pub struct BotInformation {
         /// Id of the owner of this bot
         #[cfg_attr(feature = "serde", serde(rename = "owner"))]

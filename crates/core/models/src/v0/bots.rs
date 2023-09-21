@@ -193,15 +193,16 @@ auto_derived_with_no_eq!(
 
     /// # Profile Data
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    #[derive(Default)]
     pub struct UserProfileData {
         /// Text to set as user profile description
         #[validate(length(min = 0, max = 2000))]
         #[serde(skip_serializing_if = "Option::is_none")]
-        content: Option<String>,
+        pub content: Option<String>,
         /// Attachment Id for background
         #[serde(skip_serializing_if = "Option::is_none")]
         #[validate(length(min = 1, max = 128))]
-        background: Option<String>,
+        pub background: Option<String>,
     }
 );
 

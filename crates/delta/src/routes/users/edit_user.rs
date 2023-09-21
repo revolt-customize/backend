@@ -177,12 +177,9 @@ pub async fn req(
 
     // 5. Edit bot field
     if let Some(bot) = data.bot {
-        let mut target_user = target.as_user(db).await?;
-        partial.bot = target_user.bot.as_mut().map(|x| {
-            x.model = bot.model;
-            x.welcome = bot.welcome;
-            x.clone()
-        });
+        let target_user = target.as_user(db).await?;
+        partial.bot = Some(bot);
+        partial.bot.as_mut().unwrap().owner_id = target_user.bot.as_ref().unwrap().owner_id.clone();
     }
 
     user.update(db, partial, data.remove.unwrap_or_default())
