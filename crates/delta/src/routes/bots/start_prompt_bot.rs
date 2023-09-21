@@ -23,11 +23,11 @@ pub async fn req(
         return Err(create_error!(NotFound));
     }
     let config = revolt_config::config().await;
-    if bot.bot_type != Some(BotType::PromptBot) && config.api.botservice.bot_server.is_empty() {
+    if bot.bot_type != Some(BotType::PromptBot) && config.hosts.promptserv.is_empty() {
         return Err(create_error!(InvalidProperty));
     }
 
-    let host = config.api.botservice.bot_server;
+    let host = config.hosts.promptserv;
     let url = format!("{host}/api/rest/v1/bot/restart");
     let client = reqwest::Client::new();
     let response = client

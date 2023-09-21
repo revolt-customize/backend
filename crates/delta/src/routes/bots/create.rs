@@ -83,7 +83,7 @@ async fn create_bot_in_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) 
     let config = revolt_config::config().await;
 
     let bot_type = bot.bot_type.as_ref().unwrap();
-    if *bot_type != BotType::PromptBot || config.api.botservice.bot_server.is_empty() {
+    if *bot_type != BotType::PromptBot || config.hosts.promptserv.is_empty() {
         return Ok(());
     }
 
@@ -100,7 +100,7 @@ async fn create_bot_in_bot_server(bot: &Bot, bot_user: &User, bot_owner: &User) 
         temperature: model.temperature,
     };
 
-    let host = config.api.botservice.bot_server;
+    let host = config.hosts.promptserv;
     let url = format!("{host}/api/rest/v1/bot/create");
     let client = reqwest::Client::new();
     let response = client

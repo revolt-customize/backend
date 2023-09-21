@@ -28,7 +28,7 @@ pub async fn debug_chat(data: Json<Value>) -> Result<EmptyResponse> {
 async fn develop_bot_at_bot_server(target: String, data: Json<Value>) -> Result<String> {
     let config = revolt_config::config().await;
 
-    let host = config.api.botservice.bot_server;
+    let host = config.hosts.promptserv;
     let url = format!("{host}/api/rest/v1/bot/develop/{target}");
 
     let client = reqwest::Client::new();

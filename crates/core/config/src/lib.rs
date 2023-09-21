@@ -36,6 +36,7 @@ pub struct Hosts {
     pub events: String,
     pub autumn: String,
     pub january: String,
+    pub promptserv: String,
     pub voso_legacy: String,
     pub voso_legacy_ws: String,
 }
@@ -96,7 +97,6 @@ pub struct Api {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct BotService {
-    pub bot_server: String,
     pub chatall_server: String,
     pub official_custom_bots: Vec<String>,
     pub official_model_bots: Vec<String>,
