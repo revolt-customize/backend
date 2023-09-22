@@ -6,6 +6,7 @@ use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 use revolt_models::v0;
 use revolt_result::{create_error, Error, ErrorType, Result};
+use schemars::JsonSchema;
 use ulid::Ulid;
 
 auto_derived_partial_with_no_eq!(
@@ -114,7 +115,7 @@ auto_derived!(
         pub background: Option<File>,
     }
 
-    #[derive(Default)]
+    #[derive(Default, JsonSchema)]
     pub struct PromptTemplate {
         pub system_prompt: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -124,6 +125,7 @@ auto_derived!(
 
 auto_derived_with_no_eq!(
     /// Bot information for if the user is a bot
+    #[derive(JsonSchema)]
     pub struct BotInformation {
         /// Id of the owner of this bot
         pub owner: String,
@@ -133,6 +135,8 @@ auto_derived_with_no_eq!(
         pub welcome: Option<String>,
     }
 
+    /// Bot Model
+    #[derive(JsonSchema)]
     pub struct BotModel {
         pub model_name: String,
         pub prompts: PromptTemplate,

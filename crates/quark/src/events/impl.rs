@@ -105,7 +105,7 @@ impl State {
             .unwrap_or_default();
 
         if let Some(ref bot_info) = user.bot {
-            user_ids.insert(bot_info.owner_id.clone());
+            user_ids.insert(bot_info.owner.clone());
         }
 
         // Fetch all memberships with their corresponding servers.

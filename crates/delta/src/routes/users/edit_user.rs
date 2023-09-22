@@ -88,7 +88,7 @@ pub async fn req(
         let is_bot_owner = target_user
             .bot
             .as_ref()
-            .map(|bot| bot.owner_id == user.id)
+            .map(|bot| bot.owner == user.id)
             .unwrap_or_default();
 
         if !is_bot_owner && !user.privileged {
@@ -178,8 +178,8 @@ pub async fn req(
     // 5. Edit bot field
     if let Some(bot) = data.bot {
         let target_user = target.as_user(db).await?;
-        partial.bot = Some(bot);
-        partial.bot.as_mut().unwrap().owner_id = target_user.bot.as_ref().unwrap().owner_id.clone();
+        partial.bot = Some(bot.into());
+        partial.bot.as_mut().unwrap().owner = target_user.bot.as_ref().unwrap().owner.clone();
     }
 
     user.update(db, partial, data.remove.unwrap_or_default())
