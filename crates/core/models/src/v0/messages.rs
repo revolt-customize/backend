@@ -228,7 +228,6 @@ auto_derived!(
         #[validate(length(min = 1, max = 64))]
         pub nonce: Option<String>,
         /// Message content to send
-        #[validate(length(min = 0, max = 2000))]
         pub content: Option<String>,
         /// Attachments to include in message
         pub attachments: Option<Vec<String>>,

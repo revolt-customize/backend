@@ -8,6 +8,7 @@ api = "http://local.revolt.chat/api"
 events = "ws://local.revolt.chat/ws"
 autumn = "http://local.revolt.chat/autumn"
 january = "http://local.revolt.chat/january"
+promptserv = "http://local.revolt.chat/promptserv"
 voso_legacy = ""
 voso_legacy_ws = ""
 
@@ -42,7 +43,6 @@ hcaptcha_sitekey = ""
 max_concurrent_connections = 50
 
 [api.botservice]
-bot_server = ""
 chatall_server = ""
 official_custom_bots = []
 official_model_bots = []

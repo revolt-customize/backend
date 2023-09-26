@@ -1,4 +1,4 @@
-use revolt_database::{Database, User};
+use revolt_database::User;
 use revolt_quark::authifier::Authifier;
 use revolt_result::Result;
 use rocket::serde::json::Json;
@@ -20,11 +20,8 @@ pub struct DataLogin {
 #[post("/login", data = "<data>")]
 pub async fn login(
     user: User,
-    // db: &State<Database>,
     authifier: &State<Authifier>,
     data: Json<DataLogin>,
-    // cookies: &CookieJar<'_>,
-    // headers: Headers<'_>,
 ) -> Result<Json<ResponseLogin>> {
     let data = data.into_inner();
     let account = authifier.database.find_account(&user.id).await.unwrap();

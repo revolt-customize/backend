@@ -137,7 +137,6 @@ pub fn spawn_client(db: &'static Database, stream: TcpStream, addr: SocketAddr) 
 
                                             // Handle incoming events.
                                             let data = conn
-                                                .on_message()
                                                 .next()
                                                 .await
                                                 .map(|res| {

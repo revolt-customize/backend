@@ -6,6 +6,7 @@ use once_cell::sync::Lazy;
 use rand::seq::SliceRandom;
 use revolt_models::v0;
 use revolt_result::{create_error, Error, ErrorType, Result};
+use schemars::JsonSchema;
 use ulid::Ulid;
 
 auto_derived_partial_with_no_eq!(
@@ -104,6 +105,7 @@ auto_derived!(
     }
 
     /// User's profile
+    #[derive(Default)]
     pub struct UserProfile {
         /// Text content on user's profile
         #[serde(skip_serializing_if = "String::is_empty", default)]
@@ -113,14 +115,17 @@ auto_derived!(
         pub background: Option<File>,
     }
 
-    #[derive(Default)]
+    #[derive(Default, JsonSchema)]
     pub struct PromptTemplate {
         pub system_prompt: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub role_requirements: Option<String>,
     }
 );
 
 auto_derived_with_no_eq!(
     /// Bot information for if the user is a bot
+    #[derive(JsonSchema)]
     pub struct BotInformation {
         /// Id of the owner of this bot
         pub owner: String,
@@ -130,6 +135,8 @@ auto_derived_with_no_eq!(
         pub welcome: Option<String>,
     }
 
+    /// Bot Model
+    #[derive(JsonSchema)]
     pub struct BotModel {
         pub model_name: String,
         pub prompts: PromptTemplate,
@@ -233,6 +240,13 @@ impl User {
         }
 
         RelationshipStatus::None
+    }
+
+    pub fn is_friends_with(&self, user_b: &str) -> bool {
+        matches!(
+            self.relationship_with(user_b),
+            RelationshipStatus::Friend | RelationshipStatus::User
+        )
     }
 
     /// Check whether two users have a mutual connection
@@ -376,6 +390,167 @@ impl User {
                 ..
             }) => Ok(false),
             Err(error) => Err(error),
+        }
+    }
+
+    /// Set a relationship to another user
+    pub async fn set_relationship(
+        &mut self,
+        db: &Database,
+        user_b: &User,
+        status: RelationshipStatus,
+    ) -> Result<()> {
+        db.set_relationship(&self.id, &user_b.id, &status).await?;
+
+        if let RelationshipStatus::None | RelationshipStatus::User = status {
+            if let Some(relations) = &mut self.relations {
+                relations.retain(|relation| relation.id != user_b.id);
+            }
+        } else {
+            let relation = Relationship {
+                id: user_b.id.to_string(),
+                status,
+            };
+
+            if let Some(relations) = &mut self.relations {
+                relations.retain(|relation| relation.id != user_b.id);
+                relations.push(relation);
+            } else {
+                self.relations = Some(vec![relation]);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Apply a certain relationship between two users
+    pub async fn apply_relationship(
+        &mut self,
+        db: &Database,
+        target: &mut User,
+        local: RelationshipStatus,
+        remote: RelationshipStatus,
+    ) -> Result<()> {
+        target.set_relationship(db, self, remote).await?;
+        self.set_relationship(db, target, local).await?;
+
+        EventV1::UserRelationship {
+            id: target.id.clone(),
+            user: self.clone().into(Some(&*target)).await,
+        }
+        .private(target.id.clone())
+        .await;
+
+        EventV1::UserRelationship {
+            id: self.id.clone(),
+            user: target.clone().into(Some(&*self)).await,
+        }
+        .private(self.id.clone())
+        .await;
+
+        Ok(())
+    }
+
+    /// Add another user as a friend
+    pub async fn add_friend(&mut self, db: &Database, target: &mut User) -> Result<()> {
+        match self.relationship_with(&target.id) {
+            RelationshipStatus::User => Err(create_error!(NoEffect)),
+            RelationshipStatus::Friend => Err(create_error!(AlreadyFriends)),
+            RelationshipStatus::Outgoing => Err(create_error!(AlreadySentRequest)),
+            RelationshipStatus::Blocked => Err(create_error!(Blocked)),
+            RelationshipStatus::BlockedOther => Err(create_error!(BlockedByOther)),
+            RelationshipStatus::Incoming => {
+                self.apply_relationship(
+                    db,
+                    target,
+                    RelationshipStatus::Friend,
+                    RelationshipStatus::Friend,
+                )
+                .await
+            }
+            RelationshipStatus::None => {
+                self.apply_relationship(
+                    db,
+                    target,
+                    RelationshipStatus::Outgoing,
+                    RelationshipStatus::Incoming,
+                )
+                .await
+            }
+        }
+    }
+
+    /// Remove another user as a friend
+    pub async fn remove_friend(&mut self, db: &Database, target: &mut User) -> Result<()> {
+        match self.relationship_with(&target.id) {
+            RelationshipStatus::Friend
+            | RelationshipStatus::Outgoing
+            | RelationshipStatus::Incoming => {
+                self.apply_relationship(
+                    db,
+                    target,
+                    RelationshipStatus::None,
+                    RelationshipStatus::None,
+                )
+                .await
+            }
+            _ => Err(create_error!(NoEffect)),
+        }
+    }
+
+    /// Block another user
+    pub async fn block_user(&mut self, db: &Database, target: &mut User) -> Result<()> {
+        match self.relationship_with(&target.id) {
+            RelationshipStatus::User | RelationshipStatus::Blocked => Err(create_error!(NoEffect)),
+            RelationshipStatus::BlockedOther => {
+                self.apply_relationship(
+                    db,
+                    target,
+                    RelationshipStatus::Blocked,
+                    RelationshipStatus::Blocked,
+                )
+                .await
+            }
+            RelationshipStatus::None
+            | RelationshipStatus::Friend
+            | RelationshipStatus::Incoming
+            | RelationshipStatus::Outgoing => {
+                self.apply_relationship(
+                    db,
+                    target,
+                    RelationshipStatus::Blocked,
+                    RelationshipStatus::BlockedOther,
+                )
+                .await
+            }
+        }
+    }
+
+    /// Unblock another user
+    pub async fn unblock_user(&mut self, db: &Database, target: &mut User) -> Result<()> {
+        match self.relationship_with(&target.id) {
+            RelationshipStatus::Blocked => match target.relationship_with(&self.id) {
+                RelationshipStatus::Blocked => {
+                    self.apply_relationship(
+                        db,
+                        target,
+                        RelationshipStatus::BlockedOther,
+                        RelationshipStatus::Blocked,
+                    )
+                    .await
+                }
+                RelationshipStatus::BlockedOther => {
+                    self.apply_relationship(
+                        db,
+                        target,
+                        RelationshipStatus::None,
+                        RelationshipStatus::None,
+                    )
+                    .await
+                }
+                _ => Err(create_error!(InternalError)),
+            },
+            _ => Err(create_error!(NoEffect)),
         }
     }
 

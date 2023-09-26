@@ -185,12 +185,14 @@ auto_derived!(
     #[derive(Default)]
     pub struct PromptTemplate {
         pub system_prompt: String,
+        pub role_requirements: String,
     }
 );
 
 auto_derived_with_no_eq!(
     /// Bot information for if the user is a bot
     #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    #[derive(Default)]
     pub struct BotInformation {
         /// Id of the owner of this bot
         #[cfg_attr(feature = "serde", serde(rename = "owner"))]
@@ -258,7 +260,8 @@ mod tests {
             BotModel {
                 model_name: "gpt-3.5-turbo".into(),
                 prompts: PromptTemplate {
-                    system_prompt: "".into()
+                    system_prompt: "".into(),
+                    role_requirements: "".into(),
                 },
                 temperature: 0.0,
             }

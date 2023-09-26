@@ -16,7 +16,6 @@ pub async fn create_group(
     user: User,
     data: Json<v0::DataCreateGroup>,
 ) -> Result<Json<v0::Channel>> {
-    let config = config().await;
     if user.bot.is_some() {
         return Err(create_error!(IsBot));
     }
@@ -28,14 +27,6 @@ pub async fn create_group(
         })
     })?;
 
-    data.users.insert(user.id.to_string());
-
-    if data.users.len() > config.features.limits.default.group_size {
-        return Err(create_error!(GroupTooLarge {
-            max: config.features.limits.default.group_size,
-        }));
-    }
-
     for target in &data.users {
         match user.relationship_with(target) {
             RelationshipStatus::Friend | RelationshipStatus::User => {}
@@ -44,6 +35,8 @@ pub async fn create_group(
             }
         }
     }
+
+    let config = config().await;
     if !config.api.botservice.official_model_bots.is_empty() {
         data.users
             .extend(config.api.botservice.official_model_bots.iter().cloned());
@@ -57,12 +50,13 @@ mod test {
     use std::collections::HashSet;
 
     use crate::{rocket, util::test::TestHarness};
+    use revolt_database::events::client::EventV1;
     use revolt_models::v0;
     use rocket::http::{ContentType, Header, Status};
 
     #[rocket::async_test]
     async fn create_group() {
-        let harness = TestHarness::new().await;
+        let mut harness = TestHarness::new().await;
         let (_, session, user) = harness.new_user().await;
 
         let response = harness
@@ -97,7 +91,22 @@ mod test {
                 assert_eq!(recipients.len(), 3);
                 assert!(harness.db.fetch_channel(&id).await.is_ok());
 
-                // TODO: does not check for events
+                let event = harness
+                    .wait_for_event(&format!("{}!", user.id), |event| match event {
+                        EventV1::ChannelCreate(channel) => channel.id() == id,
+                        _ => false,
+                    })
+                    .await;
+
+                match event {
+                    EventV1::ChannelCreate(v0::Channel::Group {
+                        owner: channel_owner,
+                        ..
+                    }) => {
+                        assert_eq!(owner, channel_owner);
+                    }
+                    _ => unreachable!(),
+                }
             }
             _ => unreachable!(),
         }

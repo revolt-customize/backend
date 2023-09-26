@@ -1,5 +1,5 @@
 use super::users::BotModel;
-use super::User;
+use super::{BotInformation, User};
 use validator::Validate;
 
 auto_derived!(
@@ -169,10 +169,14 @@ auto_derived_with_no_eq!(
             validate(length(min = 2, max = 32), regex = "super::RE_USERNAME")
         )]
         pub name: String,
-        pub welcome: Option<String>,
         pub bot_type: Option<BotType>,
         #[cfg_attr(feature = "validator", validate)]
         pub model: Option<BotModel>,
+
+        #[cfg_attr(feature = "validator", validate)]
+        pub bot_information: Option<BotInformation>,
+        #[cfg_attr(feature = "validator", validate)]
+        pub profile: Option<UserProfileData>,
     }
 
     /// Owned Bots Response
@@ -185,6 +189,20 @@ auto_derived_with_no_eq!(
         pub bots: Vec<Bot>,
         /// User objects
         pub users: Vec<User>,
+    }
+
+    /// # Profile Data
+    #[cfg_attr(feature = "validator", derive(validator::Validate))]
+    #[derive(Default)]
+    pub struct UserProfileData {
+        /// Text to set as user profile description
+        #[validate(length(min = 0, max = 2000))]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub content: Option<String>,
+        /// Attachment Id for background
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[validate(length(min = 1, max = 128))]
+        pub background: Option<String>,
     }
 );
 
@@ -199,15 +217,17 @@ mod tests {
     fn test_validate() {
         let mut bot = DataCreateBot {
             name: "mybot".into(),
-            welcome: None,
             bot_type: Some(BotType::PromptBot),
             model: Some(BotModel {
                 model_name: "gpt4".into(),
                 prompts: PromptTemplate {
                     system_prompt: "".into(),
+                    role_requirements: "".into(),
                 },
                 temperature: 2.0,
             }),
+            bot_information: None,
+            profile: None,
         };
 
         assert!(bot.validate().map_err(|e| println!("{e}")).is_err());

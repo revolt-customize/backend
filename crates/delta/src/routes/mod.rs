@@ -5,6 +5,7 @@ pub use rocket::response::Redirect;
 use rocket::{Build, Rocket};
 
 mod admin;
+mod auth;
 mod bots;
 mod channels;
 mod customisation;
@@ -38,6 +39,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/auth/account" => rocket_authifier::routes::account::routes(),
             // "/auth/session" => rocket_authifier::routes::session::routes(),
             "/auth/session"=>session::routes(),
+            "/auth"=>auth::routes(),
             "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
             "/onboard" => onboard::routes(),
             "/push" => push::routes(),
@@ -60,6 +62,7 @@ pub fn mount(mut rocket: Rocket<Build>) -> Rocket<Build> {
             "/auth/account" => rocket_authifier::routes::account::routes(),
             // "/auth/session" => rocket_authifier::routes::session::routes(),
             "/auth/session"=>session::routes(),
+            "/auth"=>auth::routes(),
             "/auth/mfa" => rocket_authifier::routes::mfa::routes(),
             "/onboard" => onboard::routes(),
             "/push" => push::routes(),

@@ -49,7 +49,7 @@ mod test {
         drop(response);
 
         let event = harness
-            .wait_for_event(|event| match event {
+            .wait_for_event(&bot.id, |event| match event {
                 EventV1::UserUpdate { id, .. } => id == &bot.id,
                 _ => false,
             })
@@ -76,10 +76,11 @@ mod test {
             .header(ContentType::JSON)
             .body(
                 json!(v0::DataCreateBot {
-                    welcome: None,
                     name: TestHarness::rand_string(),
                     bot_type: Some(v0::BotType::PromptBot),
-                    model: Some(Default::default())
+                    model: Some(Default::default()),
+                    bot_information: None,
+                    profile: None
                 })
                 .to_string(),
             )

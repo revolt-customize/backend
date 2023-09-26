@@ -88,7 +88,7 @@ pub async fn req(
         let is_bot_owner = target_user
             .bot
             .as_ref()
-            .map(|bot| bot.owner_id == user.id)
+            .map(|bot| bot.owner == user.id)
             .unwrap_or_default();
 
         if !is_bot_owner && !user.privileged {
@@ -177,12 +177,9 @@ pub async fn req(
 
     // 5. Edit bot field
     if let Some(bot) = data.bot {
-        let mut target_user = target.as_user(db).await?;
-        partial.bot = target_user.bot.as_mut().map(|x| {
-            x.model = bot.model;
-            x.welcome = bot.welcome;
-            x.clone()
-        });
+        let target_user = target.as_user(db).await?;
+        partial.bot = Some(bot.into());
+        partial.bot.as_mut().unwrap().owner = target_user.bot.as_ref().unwrap().owner.clone();
     }
 
     user.update(db, partial, data.remove.unwrap_or_default())
@@ -214,6 +211,7 @@ mod tests {
                     model_name: "gpt".into(),
                     prompts: v0::PromptTemplate {
                         system_prompt: "you are a developer".into(),
+                        role_requirements: "".into(),
                     },
                     temperature: 0.5,
                 }),
@@ -253,7 +251,8 @@ mod tests {
                         model: Some(v0::BotModel {
                             model_name: "bot-edited".into(),
                             prompts: v0::PromptTemplate {
-                                system_prompt: "new prompt".into()
+                                system_prompt: "new prompt".into(),
+                                role_requirements: "".into(),
                             },
                             temperature: 0.6,
                         })
@@ -282,7 +281,8 @@ mod tests {
                 model: Some(v0::BotModel {
                     model_name: "bot-edited".into(),
                     prompts: v0::PromptTemplate {
-                        system_prompt: "new prompt".into()
+                        system_prompt: "new prompt".into(),
+                        role_requirements: "".into(),
                     },
                     temperature: 0.6,
                 })
@@ -350,7 +350,7 @@ mod tests {
                 "welcome":"",
                 "model":{
                     "model_name":"gpt-4",
-                    "prompts":{"system_prompt":""},
+                    "prompts":{"system_prompt":"","role_requirements":""},
                     "temperature":2.0
                 }
             }

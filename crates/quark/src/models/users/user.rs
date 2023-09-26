@@ -1,5 +1,5 @@
 use num_enum::TryFromPrimitive;
-use revolt_models::v0;
+use revolt_database::BotInformation;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -152,7 +152,7 @@ pub struct User {
     pub privileged: bool,
     /// Bot information
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bot: Option<v0::BotInformation>,
+    pub bot: Option<BotInformation>,
 
     // ? Entries below should never be pushed to the database
     /// Current session user's relationship with this user
