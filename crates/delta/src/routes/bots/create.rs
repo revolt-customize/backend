@@ -58,11 +58,7 @@ pub async fn create_bot(
                     None => Some(Default::default()),
                 };
 
-                let default_bot_model: v0::BotModel = Default::default();
-                bot_information.model = Some(v0::BotModel {
-                    model_name: default_bot_model.model_name,
-                    ..bot_model.unwrap()
-                });
+                bot_information.model = bot_model;
             }
             None => {
                 let bot_model = match info.model {
@@ -70,11 +66,7 @@ pub async fn create_bot(
                     None => Some(Default::default()),
                 };
 
-                let default_bot_model: v0::BotModel = Default::default();
-                bot_information.model = Some(v0::BotModel {
-                    model_name: default_bot_model.model_name,
-                    ..bot_model.unwrap()
-                });
+                bot_information.model = bot_model;
             }
         };
     }
@@ -204,6 +196,7 @@ mod test {
         bot_model.prompts.role_requirements = "role_requirements".into();
         bot_model.prompts.system_prompt = "system_prompt".into();
         bot_model.temperature = 0.5;
+        bot_model.model_name = "model name".into();
 
         // check user.bot field
         assert_eq!(
